@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="hadoop,">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言Hadoop集群能够存储非常庞大数量的数据文件，我们可以使用压缩技术来降低存储空间的使用量。 将文件压缩有两大好处：减少存储文件所需要的磁盘空间，并加速数据在网络和磁盘上的传输。这两大好处在处理大量数据时相当重要，所以我们值得仔细考虑在Hadoop中文件压缩的用法。 注意，Hadoop的压缩并不是指你上传一个文本文件，自动为你压缩，或者说你下载一个压缩文件，自动帮你解压。而是指，MapRedu">
+<meta name="keywords" content="hadoop">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【Hadoop05】：Hadoop压缩">
+<meta property="og:url" content="http://yoursite.com/2019/03/06/Hadoop-Compression/index.html">
+<meta property="og:site_name" content="小西瓜">
+<meta property="og:description" content="前言Hadoop集群能够存储非常庞大数量的数据文件，我们可以使用压缩技术来降低存储空间的使用量。 将文件压缩有两大好处：减少存储文件所需要的磁盘空间，并加速数据在网络和磁盘上的传输。这两大好处在处理大量数据时相当重要，所以我们值得仔细考虑在Hadoop中文件压缩的用法。 注意，Hadoop的压缩并不是指你上传一个文本文件，自动为你压缩，或者说你下载一个压缩文件，自动帮你解压。而是指，MapRedu">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-03-06T13:45:30.188Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="【Hadoop05】：Hadoop压缩">
+<meta name="twitter:description" content="前言Hadoop集群能够存储非常庞大数量的数据文件，我们可以使用压缩技术来降低存储空间的使用量。 将文件压缩有两大好处：减少存储文件所需要的磁盘空间，并加速数据在网络和磁盘上的传输。这两大好处在处理大量数据时相当重要，所以我们值得仔细考虑在Hadoop中文件压缩的用法。 注意，Hadoop的压缩并不是指你上传一个文本文件，自动为你压缩，或者说你下载一个压缩文件，自动帮你解压。而是指，MapRedu">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/06/Hadoop-Compression/">
+
+
+
+
+
+  <title>【Hadoop05】：Hadoop压缩 | 小西瓜</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">小西瓜</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/06/Hadoop-Compression/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="XiaoXiGua">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/girl.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="小西瓜">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">【Hadoop05】：Hadoop压缩</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-06T21:44:29+08:00">
+                2019-03-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/03/06/Hadoop-Compression/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/06/Hadoop-Compression/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2019/03/06/Hadoop-Compression/" class="leancloud_visitors" data-flag-title="【Hadoop05】：Hadoop压缩">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Hadoop集群能够存储非常庞大数量的数据文件，我们可以使用压缩技术来降低存储空间的使用量。</p>
+<p>将文件压缩有两大好处：减少存储文件所需要的磁盘空间，并加速数据在网络和磁盘上的传输。这两大好处在处理大量数据时相当重要，所以我们值得仔细考虑在Hadoop中文件压缩的用法。</p>
+<p>注意，Hadoop的压缩并不是指你上传一个文本文件，自动为你压缩，或者说你下载一个压缩文件，自动帮你解压。而是指，MapReduce程序在进行数据处理时，可以自动将所支持的压缩文件解压缩，转换为普通文本数据进行处理，以及处理完成后，根据所配置的压缩算法，将结果数据压缩后保存至HDFS。</p>
+<a id="more"></a>
+<p>当前有很多不同的压缩格式、工具和算法，它们各有千秋。下表是与Hadoop结合使用的常见压缩算法。</p>
+<table>
+<thead>
+<tr>
+<th>压缩格式</th>
+<th>工具</th>
+<th>算法</th>
+<th>文件扩展名</th>
+<th>是否可切分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DEFLATE</td>
+<td>无</td>
+<td>DEFLATE</td>
+<td>.deflate</td>
+<td>否</td>
+</tr>
+<tr>
+<td>gzip</td>
+<td>gzip</td>
+<td>DEFLATE</td>
+<td>.gz</td>
+<td>否</td>
+</tr>
+<tr>
+<td>bzip2</td>
+<td>bzip2</td>
+<td>bzip2</td>
+<td>.bz2</td>
+<td>是</td>
+</tr>
+<tr>
+<td>LZO</td>
+<td>lzop</td>
+<td>LZO</td>
+<td>.lzo</td>
+<td>否</td>
+</tr>
+<tr>
+<td>LZ4</td>
+<td>无</td>
+<td>LZ4</td>
+<td>.lz4</td>
+<td>否</td>
+</tr>
+<tr>
+<td>Snappy</td>
+<td>无</td>
+<td>Snappy</td>
+<td>.snappy</td>
+<td>否</td>
+</tr>
+</tbody>
+</table>
+<p>注意，DEFLATE是一个标准的压缩算法，该算法的标准实现时zlib。没有可用于生成DEFLATE文件的常用命令行工具，因为通常都使用gzip格式。注意，gzip文件格式只是在DEFLATE格式上增加了文件头和一个文件尾。.deflate文件扩展名是Hadoop约定的。</p>
+<p>另外，如果LZO文件已经在预处理过程中被索引了，那么LZO文件是可切分的。</p>
+<p>所有压缩算法都需要权衡时间和空间，压缩和解压缩的速度更快，其代价通常只能是节省少量空间。一般的压缩工具都会提供参数来设置速度优先还是空间优先，下面是gzip命令的用法。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ ll 1.txt </span><br><span class="line">-rw-rw-r-- 1 hadoop hadoop 102691656 Mar  6 15:52 1.txt</span><br><span class="line"><span class="comment"># 速度优先</span></span><br><span class="line">$ gzip -1 1.txt</span><br><span class="line">$ ll 1.txt.gz </span><br><span class="line">-rw-rw-r-- 1 hadoop hadoop 729026 Mar  6 15:52 1.txt.gz</span><br><span class="line"></span><br><span class="line">$ ll 2.txt </span><br><span class="line">-rw-rw-r-- 1 hadoop hadoop 102691656 Mar  6 15:53 2.txt</span><br><span class="line"><span class="comment"># 空间优先</span></span><br><span class="line">$ gzip -9 2.txt</span><br><span class="line">$ ll 2.txt.gz </span><br><span class="line">-rw-rw-r-- 1 hadoop hadoop 348532 Mar  6 15:53 2.txt.gz</span><br></pre></td></tr></table></figure>
+<p>不同的压缩工具有不同的压缩特性，gzip是一个通用的压缩工具，在空间和时间性能上较为适中。bzip2的压缩能力强于gzip，但压缩速度慢一些。LZO、LZ4和Snappy优化了压缩速度，其速度比gzip快一个数量级，但压缩效率稍逊一筹。</p>
+<p>是否可切分表示对应的压缩算法是否支持切分，也就是说，是否可以搜索数据流的任意位置并进一步往下读取数据。可切分压缩格式尤其适合MapReduce，稍后详细进行讨论。</p>
+<h2 id="Codec"><a href="#Codec" class="headerlink" title="Codec"></a>Codec</h2><p>Codec是压缩-解压缩算法的一种实现。在Hadoop中，一个对<code>CompressionCodec</code>接口的实现代表一个codec。例如，<code>GzipCodec</code>包装了gzip的压缩和解压缩算法。下表是Hadoop实现的codec。</p>
+<table>
+<thead>
+<tr>
+<th>压缩格式</th>
+<th>HadoopCompressionCodec</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DEFLATE</td>
+<td>org.apache.hadoop.io.compress.DefaultCodec</td>
+</tr>
+<tr>
+<td>gzip</td>
+<td>org.apache.hadoop.io.compress.GzipCodec</td>
+</tr>
+<tr>
+<td>bzip2</td>
+<td>org.apache.hadoop.io.compress.BZip2Codec</td>
+</tr>
+<tr>
+<td>LZO</td>
+<td>org.apache.hadoop.io.compress.LzopCodec</td>
+</tr>
+<tr>
+<td>LZ4</td>
+<td>org.apache.hadoop.io.compress.Lz4Codec</td>
+</tr>
+<tr>
+<td>Snappy</td>
+<td>org.apache.hadoop.io.compress.SnappyCodec</td>
+</tr>
+</tbody>
+</table>
+<h2 id="使用CompressionCodec对数据流进行压缩和解压缩"><a href="#使用CompressionCodec对数据流进行压缩和解压缩" class="headerlink" title="使用CompressionCodec对数据流进行压缩和解压缩"></a>使用CompressionCodec对数据流进行压缩和解压缩</h2><p><code>CompressionCodec</code>包含两个函数，可以轻松用于压缩和解压缩数据。如果要对输出数据流进行压缩，可以使用<code>createOutputStream(OutputStream out)</code>方法在底层的数据流中对需要以压缩格式写入的数据新建一个<code>CompressionOutputStream</code>对象。相反，对输入数据流中读取数据进行解压缩的时候，应该使用<code>createInputStream(InputStream in)</code>来读取解压缩后的数据。</p>
+<p>下面我们使用相关的API来完成压缩和解压缩操作。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo03</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">// 创建对应的压缩算法实现类</span></span><br><span class="line">        CompressionCodec codec =</span><br><span class="line">                <span class="keyword">new</span> GzipCodec();</span><br><span class="line">        ((GzipCodec) codec).setConf(<span class="keyword">new</span> Configuration());</span><br><span class="line">        FileSystem fs = FileSystem.get(<span class="keyword">new</span> URI(<span class="string">"hdfs://company01:9000"</span>), <span class="keyword">new</span> Configuration(), <span class="string">"hadoop"</span>);</span><br><span class="line">        <span class="comment">// 压缩写入</span></span><br><span class="line">        FSDataOutputStream out = fs.create(<span class="keyword">new</span> Path(<span class="string">"/myfile.gz"</span>));</span><br><span class="line">        CompressionOutputStream compressionOutputStream = codec.createOutputStream(out);</span><br><span class="line">        compressionOutputStream.write(<span class="string">"Hello GzipCodec!"</span>.getBytes(<span class="string">"UTF-8"</span>));</span><br><span class="line">        compressionOutputStream.close();</span><br><span class="line">        out.close();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 读取压缩数据</span></span><br><span class="line">        FSDataInputStream in = fs.open(<span class="keyword">new</span> Path(<span class="string">"/myfile.gz"</span>));</span><br><span class="line">        CompressionInputStream compressionInputStream = codec.createInputStream(in);</span><br><span class="line">        IOUtils.copyBytes(compressionInputStream, System.out, <span class="number">4096</span>);</span><br><span class="line">        compressionInputStream.close();</span><br><span class="line">        in.close();</span><br><span class="line"></span><br><span class="line">        fs.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="通过扩展名推断CompressionCodec"><a href="#通过扩展名推断CompressionCodec" class="headerlink" title="通过扩展名推断CompressionCodec"></a>通过扩展名推断CompressionCodec</h2><p>在读取一个压缩文件时，通常可以根据文件的后缀名来推断需要使用哪个Codec。<code>CompressionCodecFactory</code>提供了<code>getCode()</code>方法可以通过文件的后缀返回对应的Codec。下面是使用方式。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo05</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        FileSystem fs = FileSystem.get(<span class="keyword">new</span> URI(<span class="string">"hdfs://company01:9000"</span>), <span class="keyword">new</span> Configuration(), <span class="string">"hadoop"</span>);</span><br><span class="line">        Path path = <span class="keyword">new</span> Path(<span class="string">"/myfile.gz"</span>);</span><br><span class="line">        <span class="comment">// 创建CompressionCodecFactory</span></span><br><span class="line">        CompressionCodecFactory factory = <span class="keyword">new</span> CompressionCodecFactory(<span class="keyword">new</span> Configuration());</span><br><span class="line">        <span class="comment">// 根据后缀名推断</span></span><br><span class="line">        CompressionCodec codec = factory.getCodec(path);</span><br><span class="line">        <span class="comment">// 读取数据</span></span><br><span class="line">        FSDataInputStream in = fs.open(path);</span><br><span class="line">        CompressionInputStream compressionInputStream = codec.createInputStream(in);</span><br><span class="line">        IOUtils.copyBytes(compressionInputStream, System.out, <span class="number">4096</span>, <span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">        fs.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里多说一句，MapReduce就是通过这种方式推断压缩文件响应的codec，在读取文件时自动解压缩。</p>
+<h2 id="原生类库"><a href="#原生类库" class="headerlink" title="原生类库"></a>原生类库</h2><p>为了提高性能，最好使用原生的native类库来实现压缩和解压缩。下表说明了每种压缩格式是否有Java实现和原生类库实现。</p>
+<table>
+<thead>
+<tr>
+<th>压缩格式</th>
+<th>是否有Java实现</th>
+<th>是否有原生实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DEFLATE</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>gzip</td>
+<td>是</td>
+<td>是</td>
+</tr>
+<tr>
+<td>bzip2</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>LZO</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>LZ4</td>
+<td>否</td>
+<td>是</td>
+</tr>
+<tr>
+<td>Snappy</td>
+<td>否</td>
+<td>是</td>
+</tr>
+</tbody>
+</table>
+<p>从这里也可以看出，如果文件采用有Java实现方式的压缩格式，那么数据的压缩和解压缩操作可以在任意节点上运行。如果没有Java实现，那么程序就必须运行在有本地库的节点上。</p>
+<p>Hadoop的安装包中本身包含了64位Linux构建的原生压缩二进制代码，称为<code>libhadoop.so</code>。对于其他平台，需要自己根据位于源码中的<code>BUIDING.txt</code>指令编译代码库。</p>
+<p>默认情况下，Hadoop会根据自身运行的平台搜索原生代码库，如果找到相应的代码库就会自动加载。这意味着，你无需为了使用原生代码库而修改任何设置。但是在某些情况下，可能需要禁用原生代码库，而使用内置的Java代码库（如果有的话），只需要将io.native.lib.available设置为false即可。</p>
+<p>压缩和输入分片</p>
+<p>在考虑如何压缩将要由MapReduce处理的数据时，理解这些压缩格式是否支持切分是非常重要的。例如一个文件大小为1GB，如果HDFS设置的block大小为128MB，那么该文件就会被切分为8个数据块。将这个文件作为MapReduce的输入，将创建8个输入分片，其中每个分片作为一个单独的map任务的输入被独立处理。</p>
+<p>假如文件是经过gzip压缩的，且压缩后大小为1GB。但是将每个数据块作为一个单独的分片无法工作，因为gzip不支持切分，无法从任意位置读取数据。</p>
+<p>在这种情况下，MapReduce会采用正确的做法，它不会尝试切分gzip压缩文件，因为它知道输入的文件格式并知道它不支持切分。所以，只会有1个map任务来处理8个HDFS数据块，牺牲了数据本地性。</p>
+<h2 id="如何选择压缩算法"><a href="#如何选择压缩算法" class="headerlink" title="如何选择压缩算法"></a>如何选择压缩算法</h2><p>Hadoop应用处理的数据集非常大，因此需要借助与压缩。使用哪种压缩格式与待处理的文件大小、格式和所使用的工具相关。下面是一些建议，大致是按照效率从高到低排列的。</p>
+<ul>
+<li>使用容器文件格式。例如SequenceFile、Avro数据文件、ORCFiles或Parquet。这些文件格式同时支持压缩和切分，通常最好与一个快速压缩工具联合使用，如LZO、LZ4或Snappy</li>
+<li>使用支持切分的压缩格式，例如bzip2，尽管它很慢。或者使用通过索引实现切分的压缩格式，如LZO</li>
+<li>在应用中将文件切分为块，并使用任意一种压缩格式为每个数据块建立压缩文件，在这种情况下，需要合理选择数据块的大小，以确保压缩后的数据块的大小近似于HDFS块大小</li>
+<li>存储未压缩的文件</li>
+</ul>
+<p>对于大文件来说，不要使用不支持切分整个文件的压缩格式，因为会失去数据的本地特性，进而造成MapReduce应用效率低下。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章介绍了Hadoop支持压缩格式，以及各种压缩格式之间的差异。在Hadoop中，所支持的每种压缩格式都是<code>CompressionCodec</code>接口的子类，可以通过<code>CompressionCodecFactory</code>根据文件名称自动推断出对应的压缩格式，这样就实现了自动解压操作，实际上在MapReduce中就是如此进行的。接下来我们就如何选择压缩算法，以及压缩文件是否支持切分对MapReduce程序的影响进行了讨论。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>如果您觉得不错，请赞赏一下!</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="XiaoXiGua 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="XiaoXiGua 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/hadoop/" rel="tag"># hadoop</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/06/Hadoop-Benchmarks/" rel="next" title="【Hadoop04】：Hadoop基准测试">
+                <i class="fa fa-chevron-left"></i> 【Hadoop04】：Hadoop基准测试
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": false,
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "douban", "sqq", "qzone", "weixin", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/girl.png" alt="XiaoXiGua">
+            
+              <p class="site-author-name" itemprop="name">XiaoXiGua</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Codec"><span class="nav-number">2.</span> <span class="nav-text">Codec</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用CompressionCodec对数据流进行压缩和解压缩"><span class="nav-number">3.</span> <span class="nav-text">使用CompressionCodec对数据流进行压缩和解压缩</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#通过扩展名推断CompressionCodec"><span class="nav-number">4.</span> <span class="nav-text">通过扩展名推断CompressionCodec</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#原生类库"><span class="nav-number">5.</span> <span class="nav-text">原生类库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何选择压缩算法"><span class="nav-number">6.</span> <span class="nav-text">如何选择压缩算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">7.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">XiaoXiGua</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz',
+        appKey: 'wqOgPg0cXQillOPzrXScXSHa',
+        placeholder: '欢迎评论',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz", "wqOgPg0cXQillOPzrXScXSHa");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
