@@ -88,7 +88,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://i.imgur.com/MLBzp64.png">
 <meta property="og:image" content="https://i.imgur.com/UndIzv6.png">
-<meta property="og:updated_time" content="2019-03-07T14:54:15.253Z">
+<meta property="og:updated_time" content="2019-03-09T06:56:37.947Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="【Hadoop06】：MapReduce基础">
 <meta name="twitter:description" content="前言MapReduce是一种可用于数据处理的编程模型，用于解决大数据场景下数据处理的问题。该模型比较简单，但要想写出有用的程序却不太容易。Hadoop可以运行各种语言版本的MapReduce程序，不过我们这里以Java语言为主。 MapReduce的核心思想是”分而治之”，简单来说，就是将要处理的数据集，拆分成多个任务并行在多个节点上运行，然后将任务的运行结果收集起来，再进行全局的计算，最后将结果">
@@ -404,6 +404,7 @@
 <figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ bin/hadoop jar mr/hadoop-example-1.0.jar org.victor.mapreduce.demo01.WordCountRunner /mr/demo01/input /mr/demo01/output</span><br></pre></td></tr></table></figure>
 <p>查看输出结果。</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ bin/hadoop fs -text /mr/demo01/output/*</span><br><span class="line">hadoop	3</span><br><span class="line">hdfs	3</span><br><span class="line">mapreduce	2</span><br><span class="line">spark	2</span><br><span class="line">wordcount	1</span><br><span class="line">yarn	3</span><br></pre></td></tr></table></figure>
+<p>从结果中可以看到，数据的顺序，是按照Key进行升序排列的。</p>
 <p>OK，我们的第一个MapReduce程序WordCount就算是完成了，想必你有很多疑问，不用着急，接下来我们就会对这个程序进行详细剖析。</p>
 <h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>在本章中，我们介绍了MapReduce的基本概念。MapReduce编程模型分为两个阶段：Map阶段和Reduce阶段。Map阶段用于并行执行没有依赖关系的任务，Reduce阶段对Map阶段的输出进行汇总处理。在Hadoop框架中，提供了MapReduce框架，可以将我们按照固定模式编写的代码封装为一个完整的分布式程序，我们无需关心网络传输、任务调度等工作，可以将开发人员的精力专注于具体的实现上。最后，我们编写了第一个MapReduce程序：WordCount，可用于统计HDFS文件中的单词个数。</p>
 
@@ -580,7 +581,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-count">10</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

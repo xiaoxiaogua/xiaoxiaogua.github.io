@@ -87,7 +87,7 @@
 <meta property="og:description" content="前言在上一章中，我们介绍了MapReduce的基本概念，并编写了一个WordCount程序提交到集群上运行。想必大家在编写完第一个程序后，会有很多疑惑，本章会对该程序进行详细剖析，把知识点理解透彻。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://i.imgur.com/1CrT3Rh.png">
-<meta property="og:updated_time" content="2019-03-07T15:22:13.275Z">
+<meta property="og:updated_time" content="2019-03-09T03:00:47.596Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="【Hadoop07】：WordCount详解">
 <meta name="twitter:description" content="前言在上一章中，我们介绍了MapReduce的基本概念，并编写了一个WordCount程序提交到集群上运行。想必大家在编写完第一个程序后，会有很多疑惑，本章会对该程序进行详细剖析，把知识点理解透彻。">
@@ -499,7 +499,7 @@
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/mr/demo01/input /mr/demo01/output2</span><br></pre></td></tr></table></figure>
 <p>这样的话，程序在运行时会读取HDFS中的数据，处理完成后，再将数据写回HDFS。不过这样做似乎没什么意义，调试的话，直接使用本地文件系统就好了，使用HDFS上的数据，还需要经过网络传输。</p>
 <p>注意，如果发现无法执行任务，可以尝试设置<code>HADOOP_USER_NAME</code>环境变量为hadoop，或者在集群的<code>hdfs-site.xml</code>中，将<code>dfs.permissions.enabled</code>配置项设置为<code>false</code>，重启集群即可。</p>
-<h2 id="使用ToolRunner"><a href="#使用ToolRunner" class="headerlink" title="使用ToolRunner"></a>使用ToolRunner</h2><p>有时候我们需要通过命令行提交程序时，为<code>Configuration</code>对象设置一些特别的配置，例如Map任务的数量、Reduce任务的数量、输出数据是否压缩等，而不是将这些配置硬编码到代码中。</p>
+<h2 id="使用ToolRunner"><a href="#使用ToolRunner" class="headerlink" title="使用ToolRunner"></a>使用ToolRunner</h2><p>有时候我们需要通过命令行提交程序时，为<code>Configuration</code>对象设置一些特别的配置，例如任务的内存大小、任务需要的CPU个数、输出数据是否压缩等，而不是将这些配置硬编码到代码中。</p>
 <p>当然，我们可以使用args的方式获取到对应位置的参数，然后设置到Configuration对象中，不过这样很麻烦，尤其是当要设置的参数很多的时候。</p>
 <p>为了简化命令行方式运行作业，Hadoop自带了一些辅助类。<code>GenericOptionsParser</code>是一个类，用来解释常用的Hadoop命令行选项，并根据需要，为Configuration对象设置相应的值。不过通常不会直接使用该类，更方便的方式是实现<code>Tool</code>接口，通过<code>ToolRunner</code>来运行程序。在<code>ToolRunner</code>内部会调用<code>GenericOptionsParser</code>。</p>
 <p>下面我们通过ToolRunner的方式将WordCount程序改写，实际上只需要改动程序入口类即可，Mapper和Reducer无需改动。</p>
@@ -609,6 +609,10 @@
 
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2019/03/09/MapReduce-Invocation-Process-Analysis/" rel="prev" title="MapReduce执行流程分析">
+                MapReduce执行流程分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
           </div>
         </div>
       
@@ -716,7 +720,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">9</span>
+                  <span class="site-state-item-count">10</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

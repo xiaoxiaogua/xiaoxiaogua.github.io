@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言在上一章中，我们对WordCount程序进行了详细的分析，并简单介绍了WordCount程序的运行流程。今天我们从来详细分析下MapReduce的执行流程，并引出一些核心的概念与组件。本章非常重要，理解了运行机制和原理，不仅有助于排查故障，更能够根据需要进行系统调优。 在MapReduce中，最重要的一个环节是Shuffle，深刻理解Shuffle机制对于理解MapReduce程序的执行流程非">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MapReduce执行流程分析">
+<meta property="og:url" content="http://yoursite.com/2019/03/09/MapReduce-Invocation-Process-Analysis/index.html">
+<meta property="og:site_name" content="小西瓜">
+<meta property="og:description" content="前言在上一章中，我们对WordCount程序进行了详细的分析，并简单介绍了WordCount程序的运行流程。今天我们从来详细分析下MapReduce的执行流程，并引出一些核心的概念与组件。本章非常重要，理解了运行机制和原理，不仅有助于排查故障，更能够根据需要进行系统调优。 在MapReduce中，最重要的一个环节是Shuffle，深刻理解Shuffle机制对于理解MapReduce程序的执行流程非">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://i.imgur.com/tSViq80.png">
+<meta property="og:image" content="https://i.imgur.com/UndIzv6.png">
+<meta property="og:image" content="https://i.imgur.com/R2ILkPP.png">
+<meta property="og:image" content="https://i.imgur.com/vHSWE07.png">
+<meta property="og:image" content="https://i.imgur.com/MZPrPtr.png">
+<meta property="og:image" content="https://i.imgur.com/5EST6ho.png">
+<meta property="og:image" content="https://i.imgur.com/lbEqk6j.png">
+<meta property="og:image" content="https://i.imgur.com/otEbvBS.png">
+<meta property="og:updated_time" content="2019-03-09T09:18:31.991Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MapReduce执行流程分析">
+<meta name="twitter:description" content="前言在上一章中，我们对WordCount程序进行了详细的分析，并简单介绍了WordCount程序的运行流程。今天我们从来详细分析下MapReduce的执行流程，并引出一些核心的概念与组件。本章非常重要，理解了运行机制和原理，不仅有助于排查故障，更能够根据需要进行系统调优。 在MapReduce中，最重要的一个环节是Shuffle，深刻理解Shuffle机制对于理解MapReduce程序的执行流程非">
+<meta name="twitter:image" content="https://i.imgur.com/tSViq80.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/09/MapReduce-Invocation-Process-Analysis/">
+
+
+
+
+
+  <title>MapReduce执行流程分析 | 小西瓜</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">小西瓜</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/09/MapReduce-Invocation-Process-Analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="XiaoXiGua">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/girl.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="小西瓜">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">MapReduce执行流程分析</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-09T17:18:00+08:00">
+                2019-03-09
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/03/09/MapReduce-Invocation-Process-Analysis/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/09/MapReduce-Invocation-Process-Analysis/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2019/03/09/MapReduce-Invocation-Process-Analysis/" class="leancloud_visitors" data-flag-title="MapReduce执行流程分析">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在上一章中，我们对WordCount程序进行了详细的分析，并简单介绍了WordCount程序的运行流程。今天我们从来详细分析下MapReduce的执行流程，并引出一些核心的概念与组件。本章非常重要，理解了运行机制和原理，不仅有助于排查故障，更能够根据需要进行系统调优。</p>
+<p>在MapReduce中，最重要的一个环节是<code>Shuffle</code>，深刻理解Shuffle机制对于理解MapReduce程序的执行流程非常重要，此外，Shuffle的调优也是MapReduce中非常重要的环节，只有理解了原理，才能有针对的设置参数。</p>
+<a id="more"></a>
+<h2 id="MapReduce执行流程"><a href="#MapReduce执行流程" class="headerlink" title="MapReduce执行流程"></a>MapReduce执行流程</h2><p>MapReduce任务的执行流程可以分为五个步骤：</p>
+<ul>
+<li><code>数据输入</code>，如何读取数据</li>
+<li><code>执行Map任务</code>，自定义的Map处理逻辑</li>
+<li><code>Shuffle</code>，数据分区、分组、排序、合并等</li>
+<li><code>执行Reduce任务</code>，自定义的Reduce处理逻辑</li>
+<li><code>数据输出</code>，如何输出数据</li>
+</ul>
+<p><img src="https://i.imgur.com/tSViq80.png" alt></p>
+<p>我们将Shuffle这一过程定义为：从Map处理逻辑的输出，到Reduce处理逻辑输入这一部分。从图中可以看到，这一部分涉及到的过程非常复杂，也是MapReduce程序的核心所在。</p>
+<p>由于Map处理逻辑和Reduce处理逻辑是我们自己编写的，无需过多说明。下面我们主要对输入分片、Shuffle以及输出三个部分进行分析。</p>
+<h2 id="输入分片"><a href="#输入分片" class="headerlink" title="输入分片"></a>输入分片</h2><h3 id="分片概念"><a href="#分片概念" class="headerlink" title="分片概念"></a>分片概念</h3><p>什么是输入分片？我们在介绍MapReduce编程模型时说过，Map任务是一组独立、没有互相依赖、可并行执行的逻辑。还记得数苹果的例子吗？</p>
+<p><img src="https://i.imgur.com/UndIzv6.png" alt></p>
+<p>在图中，四框苹果交给四个人去数，是按照”框”去划分处理的边界。假如我将四框苹果交给八个人去数，每人数半框，是不是效率更高？</p>
+<p>输入分片和上面划分的概念类似，它是指将输入的数据，划分为N个分片，每个分片能够由一个Map任务单独处理。因此，输入分片就决定了Map任务的个数。</p>
+<p><img src="https://i.imgur.com/R2ILkPP.png" alt></p>
+<p>需要注意，输入分片并不是真正的将输入的数据源真正的切分为一个个小文件了，它只是一种划分逻辑，举例来说，一个书架上有三层书，找三个人分别数每一层有多少本，因此每个人只要从<code>指定的位置</code>开始数就行了，而不是真正的将书架上的书全部卸下来。如果输入的数据源是HDFS的文本文件，那就可以按照偏移量来划分任务，例如任务A负责偏移量0-999的数据，任务B负责偏移量1000-1999的数据，任务C负责剩下偏移量2000-2500的数据。</p>
+<p>对于不同的输入有不同的划分规则，例如对于HDFS上的压缩文件来说，如果该压缩算法是不能够被切分的，那么就不能进行输入分片了，所有的数据只能由一个Map任务来处理。</p>
+<h3 id="TextInputFormat"><a href="#TextInputFormat" class="headerlink" title="TextInputFormat"></a>TextInputFormat</h3><p>下面我们以<code>TextInputFormat</code>为例，来看一下它是如何做输入分片的。</p>
+<p>在MapReduce程序的入口类中，需要定义Map任务的输入路径，不知道大家是否还有印象^_^。回顾下代码吧。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置输入</span></span><br><span class="line">job.setInputFormatClass(TextInputFormat.class);</span><br><span class="line">TextInputFormat.addInputPath(job, <span class="keyword">new</span> Path(args[<span class="number">0</span>]));</span><br></pre></td></tr></table></figure>
+<p>在分析输入分片之前，先简单介绍一下该类。</p>
+<blockquote>
+<p>TextInputFormat是<code>InputFormat</code>对于普通文本文件的一种实现，文件可以被划分为多行，以换行符或回车符作为行与行之间的分割。通过该类读取到的数据Key-Value分别代表当前行在文件中的位置以及当前行的文本数据。</p>
+</blockquote>
+<p>举例来说，假设文本文件内容如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hello world hdfs</span><br><span class="line">yarn mapreduce</span><br><span class="line">hadoop hdfs</span><br></pre></td></tr></table></figure>
+<p>那么通过TextInputFormat以Key-Value的形式交给Map任务去处理。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(0, &quot;hello world hdfs&quot;)</span><br><span class="line">(17, &quot;yarn mapreduce&quot;)</span><br><span class="line">(32, &quot;hadoop hdfs&quot;)</span><br></pre></td></tr></table></figure>
+<p>再次强调，Key并不是行号。一般情况下，很难获取到行号，因为文件按字节而不是按行切分为分片。每个分片单独处理。行号实际上是一个顺序的标记，即每次读取一行的时候需要对行号进行计数。因此，在分片内知道行号是可能的，但在文件中是不可能的。不过还好，每一行在文件中的偏移量是可以在分片内单独确定的，而不需要知道分片的信息。因为每个分片都知道上一个分片的大小，只需要加到分片内偏移量上，就可以获取每行在整个文件中的偏移量了。</p>
+<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p>下面我们来看一下TextInputFormat的源码。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TextInputFormat</span> <span class="keyword">extends</span> <span class="title">FileInputFormat</span>&lt;<span class="title">LongWritable</span>, <span class="title">Text</span>&gt; </span>&#123;</span><br><span class="line">  <span class="comment">// 这里创建了一个RecordReade的实例对象LineRecordReader，</span></span><br><span class="line">  <span class="comment">// 用于读取分片数据</span></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> RecordReader&lt;LongWritable, Text&gt; </span><br><span class="line">    createRecordReader(InputSplit split,</span><br><span class="line">                       TaskAttemptContext context) &#123;</span><br><span class="line">    String delimiter = context.getConfiguration().get(</span><br><span class="line">        <span class="string">"textinputformat.record.delimiter"</span>);</span><br><span class="line">    <span class="keyword">byte</span>[] recordDelimiterBytes = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> != delimiter)</span><br><span class="line">      recordDelimiterBytes = delimiter.getBytes(Charsets.UTF_8);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> LineRecordReader(recordDelimiterBytes);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 这里用于确定输入的文件是否可以被切分，如果文件没有压缩，则认为可以切分，</span></span><br><span class="line">  <span class="comment">// 如果文件是压缩的，那么判断对应的codec是否支持切分（还记得bzip2吗）</span></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">isSplitable</span><span class="params">(JobContext context, Path file)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> CompressionCodec codec =</span><br><span class="line">      <span class="keyword">new</span> CompressionCodecFactory(context.getConfiguration()).getCodec(file);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> == codec) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> codec <span class="keyword">instanceof</span> SplittableCompressionCodec;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>下面我们看一下LineRecordReader的初始化方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initialize</span><span class="params">(InputSplit genericSplit,</span></span></span><br><span class="line"><span class="function"><span class="params">                       TaskAttemptContext context)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  FileSplit split = (FileSplit) genericSplit;</span><br><span class="line">  Configuration job = context.getConfiguration();</span><br><span class="line">  <span class="keyword">this</span>.maxLineLength = job.getInt(MAX_LINE_LENGTH, Integer.MAX_VALUE);</span><br><span class="line">  <span class="comment">// 分片起始位置</span></span><br><span class="line">  start = split.getStart();</span><br><span class="line">  <span class="comment">// 分片结束位置</span></span><br><span class="line">  end = start + split.getLength();</span><br><span class="line">  <span class="comment">// 要读取的数据文件</span></span><br><span class="line">  <span class="keyword">final</span> Path file = split.getPath();</span><br><span class="line"></span><br><span class="line">  <span class="comment">// open the file and seek to the start of the split</span></span><br><span class="line">  <span class="keyword">final</span> FileSystem fs = file.getFileSystem(job);</span><br><span class="line">  fileIn = fs.open(file);</span><br><span class="line">  <span class="comment">// 获取文件对应的codec</span></span><br><span class="line">  CompressionCodec codec = <span class="keyword">new</span> CompressionCodecFactory(job).getCodec(file);</span><br><span class="line">  <span class="comment">// 如果codec不为null，说明数据文件是压缩文件</span></span><br><span class="line">  <span class="keyword">if</span> (<span class="keyword">null</span>!=codec) &#123;</span><br><span class="line">    isCompressedInput = <span class="keyword">true</span>;</span><br><span class="line">    decompressor = CodecPool.getDecompressor(codec);</span><br><span class="line">    <span class="comment">// 判断压缩算法是否支持切分</span></span><br><span class="line">    <span class="keyword">if</span> (codec <span class="keyword">instanceof</span> SplittableCompressionCodec) &#123;</span><br><span class="line">      <span class="keyword">final</span> SplitCompressionInputStream cIn =</span><br><span class="line">        ((SplittableCompressionCodec)codec).createInputStream(</span><br><span class="line">          fileIn, decompressor, start, end,</span><br><span class="line">          SplittableCompressionCodec.READ_MODE.BYBLOCK);</span><br><span class="line">      in = <span class="keyword">new</span> CompressedSplitLineReader(cIn, job,</span><br><span class="line">          <span class="keyword">this</span>.recordDelimiterBytes);</span><br><span class="line">      start = cIn.getAdjustedStart();</span><br><span class="line">      end = cIn.getAdjustedEnd();</span><br><span class="line">      filePosition = cIn;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// 如果压缩算法不支持切分，并且不是从头开始读取</span></span><br><span class="line">      <span class="comment">// 这样不行啊小老弟，抛出异常吧</span></span><br><span class="line">      <span class="keyword">if</span> (start != <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// So we have a split that is only part of a file stored using</span></span><br><span class="line">        <span class="comment">// a Compression codec that cannot be split.</span></span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Cannot seek in "</span> +</span><br><span class="line">            codec.getClass().getSimpleName() + <span class="string">" compressed stream"</span>);</span><br><span class="line">      &#125;</span><br><span class="line"><span class="comment">// 从头开始读取</span></span><br><span class="line">      in = <span class="keyword">new</span> SplitLineReader(codec.createInputStream(fileIn,</span><br><span class="line">          decompressor), job, <span class="keyword">this</span>.recordDelimiterBytes);</span><br><span class="line">      filePosition = fileIn;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// 非压缩文件，直接seek到起始位置就行了</span></span><br><span class="line">    fileIn.seek(start);</span><br><span class="line">    in = <span class="keyword">new</span> UncompressedSplitLineReader(</span><br><span class="line">        fileIn, job, <span class="keyword">this</span>.recordDelimiterBytes, split.getLength());</span><br><span class="line">    filePosition = fileIn;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// If this is not the first split, we always throw away first record</span></span><br><span class="line">  <span class="comment">// because we always (except the last split) read one extra line in</span></span><br><span class="line">  <span class="comment">// next() method.</span></span><br><span class="line">  <span class="comment">// 注意这里，如果当前读取的不是第一个分片的话，将第一行数据丢弃，</span></span><br><span class="line">  <span class="comment">// 因为除了最后一个分片外，在next()方法中会额外读取一行</span></span><br><span class="line">  <span class="keyword">if</span> (start != <span class="number">0</span>) &#123;</span><br><span class="line">    start += in.readLine(<span class="keyword">new</span> Text(), <span class="number">0</span>, maxBytesToConsume(start));</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">this</span>.pos = start;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从代码中我们看出，对于LineRecordReader来说，分片就是某个数据文件的一部分，有起始位置和结束位置，只需要通过<code>seek()</code>方法找到起始位置，不断的读取就行了。压缩文件的话，处理会稍微复杂一些，不过整体逻辑是类似的。</p>
+<p>诶，分片的逻辑在哪呢？TextInputFormat中只有判断是否支持分片的方法和创建RecordReader的方法，而RecordReader就开始准备读数据了，没有看到分片的逻辑啊。</p>
+<p>分片的逻辑实际上在父类<code>FileInputFormat</code>类中实现的，因为无论是TextInputFormat，还是KeyValueTextInputFormat（文件中的数据是Key-Value格式的），它们的分片逻辑都是相同的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> List&lt;InputSplit&gt; <span class="title">getSplits</span><span class="params">(JobContext job)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">	<span class="comment">// 一个计时器，用于计算方法的执行时间</span></span><br><span class="line">	StopWatch sw = <span class="keyword">new</span> StopWatch().start();</span><br><span class="line">	<span class="comment">// 获取分片的最小值，如果没有配置（mapreduce.input.fileinputformat.split.minsize）就是1</span></span><br><span class="line">	<span class="keyword">long</span> minSize = Math.max(getFormatMinSplitSize(), getMinSplitSize(job));</span><br><span class="line">	<span class="comment">// 获取分片的最大值，如果没有配置（mapreduce.input.fileinputformat.split.maxsize）就是Long.MAX_VALUE</span></span><br><span class="line">	<span class="keyword">long</span> maxSize = getMaxSplitSize(job);</span><br><span class="line"></span><br><span class="line">	<span class="comment">// generate splits</span></span><br><span class="line">	List&lt;InputSplit&gt; splits = <span class="keyword">new</span> ArrayList&lt;InputSplit&gt;();</span><br><span class="line">	<span class="comment">// 从配置的输入路径中获取到路径下所有的文件</span></span><br><span class="line">	<span class="comment">// 还记得我们是如何配置输入路径的吗？</span></span><br><span class="line">	List&lt;FileStatus&gt; files = listStatus(job);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">boolean</span> ignoreDirs = !getInputDirRecursive(job)</span><br><span class="line">	  &amp;&amp; job.getConfiguration().getBoolean(INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, <span class="keyword">false</span>);</span><br><span class="line">	<span class="comment">// 开始遍历文件</span></span><br><span class="line">	<span class="keyword">for</span> (FileStatus file: files) &#123;</span><br><span class="line">	  <span class="keyword">if</span> (ignoreDirs &amp;&amp; file.isDirectory()) &#123;</span><br><span class="line">		<span class="keyword">continue</span>;</span><br><span class="line">	  &#125;</span><br><span class="line">      <span class="comment">// 获取路径</span></span><br><span class="line">	  Path path = file.getPath();</span><br><span class="line">      <span class="comment">// 获取长度</span></span><br><span class="line">	  <span class="keyword">long</span> length = file.getLen();</span><br><span class="line">	  <span class="keyword">if</span> (length != <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// 获取文件的数据块分布信息</span></span><br><span class="line">		BlockLocation[] blkLocations;</span><br><span class="line">		<span class="keyword">if</span> (file <span class="keyword">instanceof</span> LocatedFileStatus) &#123;</span><br><span class="line">		  blkLocations = ((LocatedFileStatus) file).getBlockLocations();</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		  FileSystem fs = path.getFileSystem(job.getConfiguration());</span><br><span class="line">		  blkLocations = fs.getFileBlockLocations(file, <span class="number">0</span>, length);</span><br><span class="line">		&#125;</span><br><span class="line">        <span class="comment">// 如果文件是可以切分的，注意，FileInputFormat的默认实现为true，</span></span><br><span class="line">        <span class="comment">// 子类中如TextInputFormat会根据文件是否压缩来判断</span></span><br><span class="line">		<span class="keyword">if</span> (isSplitable(job, path)) &#123;</span><br><span class="line">          <span class="comment">// 获取文件的数据块大小（一个文件上传至HDFS会被切分为多个数据块，默认为128MB，还记得吗？）</span></span><br><span class="line">		  <span class="keyword">long</span> blockSize = file.getBlockSize();</span><br><span class="line">          <span class="comment">// 根据配置的分块最小值、最大值以及数据块大小计算出分片的大小</span></span><br><span class="line">          <span class="comment">// Math.max(minSize, Math.min(maxSize, blockSize));</span></span><br><span class="line">          <span class="comment">// 因此，如果我们不配置分片的最大最小值，分片的大小就等于HDFS数据块的大小</span></span><br><span class="line">		  <span class="keyword">long</span> splitSize = computeSplitSize(blockSize, minSize, maxSize);</span><br><span class="line">		  <span class="comment">// 开始切分了</span></span><br><span class="line">          <span class="comment">// 剩余大小</span></span><br><span class="line">		  <span class="keyword">long</span> bytesRemaining = length;</span><br><span class="line">          <span class="comment">// 如果剩余大小除以分片大小大于1.1</span></span><br><span class="line">          <span class="comment">// 假如一个文件是500MB，HDFS数据块大小为128MB，那么</span></span><br><span class="line">          <span class="comment">// 524288000 / 134217728 = 3.90625 &gt; 1.1</span></span><br><span class="line">          <span class="comment">// 如果一个文件是50MB，HDFS数据块大小为128MB，那么</span></span><br><span class="line">          <span class="comment">// 52428800 / 134217728 = 0.390625 &lt; 1.1</span></span><br><span class="line">          <span class="comment">// 实际上就是说，如果文件的大小在140MB（HDFS数据块大小*1.1）左右，</span></span><br><span class="line">          <span class="comment">// 就会将整个文件作为一个分片来处理，否则的话，就会划分为多个分片。</span></span><br><span class="line">          <span class="comment">// 因为如果文件大小稍微超过了一点数据块的大小，如果进行了分片划分，意味着就多了一个Map任务，</span></span><br><span class="line">          <span class="comment">// 而这个Map任务处理的数据量非常少，没必要这样做。</span></span><br><span class="line">		  <span class="keyword">while</span> (((<span class="keyword">double</span>) bytesRemaining)/splitSize &gt; SPLIT_SLOP) &#123;</span><br><span class="line">            <span class="comment">// 找到分片数据所属的数据块，遍历一下所有的数据块就能找到了</span></span><br><span class="line">			<span class="keyword">int</span> blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);</span><br><span class="line">            <span class="comment">// 创建分片，指定文件路径、起始位置、分片大小、数据块所在的节点等信息</span></span><br><span class="line">			splits.add(makeSplit(path, length-bytesRemaining, splitSize,</span><br><span class="line">						blkLocations[blkIndex].getHosts(),</span><br><span class="line">						blkLocations[blkIndex].getCachedHosts()));</span><br><span class="line">            <span class="comment">// 减去已经划分的大小</span></span><br><span class="line">			bytesRemaining -= splitSize;</span><br><span class="line">		  &#125;</span><br><span class="line">		  <span class="comment">// 如果文件小于140MB或者在上面的划分逻辑后，还剩下部分数据</span></span><br><span class="line">          <span class="comment">// 将这部分数据作为一个分片</span></span><br><span class="line">		  <span class="keyword">if</span> (bytesRemaining != <span class="number">0</span>) &#123;</span><br><span class="line">			<span class="keyword">int</span> blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);</span><br><span class="line">			splits.add(makeSplit(path, length-bytesRemaining, bytesRemaining,</span><br><span class="line">					   blkLocations[blkIndex].getHosts(),</span><br><span class="line">					   blkLocations[blkIndex].getCachedHosts()));</span><br><span class="line">		  &#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123; <span class="comment">// not splitable</span></span><br><span class="line">          <span class="comment">// 文件不支持切分，因此会将整个文件作为一个分片</span></span><br><span class="line">		  <span class="keyword">if</span> (LOG.isDebugEnabled()) &#123;</span><br><span class="line">			<span class="comment">// Log only if the file is big enough to be splitted</span></span><br><span class="line">			<span class="keyword">if</span> (length &gt; Math.min(file.getBlockSize(), minSize)) &#123;</span><br><span class="line">			  LOG.debug(<span class="string">"File is not splittable so no parallelization "</span></span><br><span class="line">				  + <span class="string">"is possible: "</span> + file.getPath());</span><br><span class="line">			&#125;</span><br><span class="line">		  &#125;</span><br><span class="line">		  splits.add(makeSplit(path, <span class="number">0</span>, length, blkLocations[<span class="number">0</span>].getHosts(),</span><br><span class="line">					  blkLocations[<span class="number">0</span>].getCachedHosts()));</span><br><span class="line">		&#125;</span><br><span class="line">	  &#125; <span class="keyword">else</span> &#123; </span><br><span class="line">        <span class="comment">// 文件的大小为0，但是也得作为一个分片啊，不能随便给我跳过去把小老弟</span></span><br><span class="line">		<span class="comment">//Create empty hosts array for zero length files</span></span><br><span class="line">		splits.add(makeSplit(path, <span class="number">0</span>, length, <span class="keyword">new</span> String[<span class="number">0</span>]));</span><br><span class="line">	  &#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// Save the number of input files for metrics/loadgen</span></span><br><span class="line">    <span class="comment">// 将分片的数量设置到Configuration实例中</span></span><br><span class="line">	job.getConfiguration().setLong(NUM_INPUT_FILES, files.size());</span><br><span class="line">	sw.stop();</span><br><span class="line">	<span class="keyword">if</span> (LOG.isDebugEnabled()) &#123;</span><br><span class="line">	  LOG.debug(<span class="string">"Total # of splits generated by getSplits: "</span> + splits.size()</span><br><span class="line">		  + <span class="string">", TimeTaken: "</span> + sw.now(TimeUnit.MILLISECONDS));</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> splits;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从分片的划分逻辑中，我们可以得出如下结论：</p>
+<ol>
+<li>如果输入文件有多个，那么分片的数量肯定有多个，无论文件大小或是否可切分</li>
+<li>如果单个文件的大小超过了数据块的大小的1.1倍，那么就会划分为多个分片</li>
+<li>分片的大小和HDFS数据块的大小息息相关（如果不进行配置的话）</li>
+</ol>
+<p>下面我们使用画图的方式，将分片的逻辑进行描述，加深印象。</p>
+<p><img src="https://i.imgur.com/vHSWE07.png" alt></p>
+<p>MapReduce可以处理不同类型的数据格式，以及不同的数据源。不过使用最多的就是对数据文件进行处理，下面我们来看一下相关类的层次结构。</p>
+<p><img src="https://i.imgur.com/MZPrPtr.png" alt></p>
+<p>有了输入分片后，接下来就可以执行我们自定义的Map处理逻辑了。每一个分片都会对应一个<code>RecordReader</code>，例如TextInputFormat对应的是LineRecordReader。框架会循环调用RecordReader的<code>nextKeyValue()</code>方法，获取到分片内的输入数据，然后调用我们在Mapper类中重写的map()方法，将数据交给我们的逻辑进行处理。</p>
+<h2 id="Shuffle"><a href="#Shuffle" class="headerlink" title="Shuffle"></a>Shuffle</h2><p>在我们自定义的map()方法中，将数据处理完成后，调用<code>context.write()</code>方法将处理后的数据输出，这时就进入到了shuffle阶段。再次强调，shuffle阶段是指从Map任务的输入到Reduce任务的输入中间的过程。</p>
+<h3 id="Map端"><a href="#Map端" class="headerlink" title="Map端"></a>Map端</h3><p>当map()方法开始产生输出时，并不是简单地将数据写到磁盘。数据首先会被写入到一个缓冲区中，然后再被刷到磁盘上。数据可以在内存缓冲区中进行预排序，能够很大程度的提升效率。</p>
+<p>每个Map任务都有一个对应的缓冲区，默认情况下，缓冲区的大小为100MB，这个值可以通过改变<code>mapreduce.task.io.sort.mb</code>属性来调整。一旦缓冲区的内容达到了阈值（<code>mapreduce.map.sort.spill.percent</code>，默认为0.8，也就是80%），一个后台线程便开始把内容写到磁盘上。在写磁盘的过程中，Map任务可以继续将数据写到缓冲区，但如果在此期间缓冲区被填满，Map会被阻塞直到写磁盘过程完成。写入到磁盘上的数据被存放在<code>mapreduce.cluster.local.dir</code>属性配置的目录下。</p>
+<p>在写磁盘之前，线程首先根据数据最终要传输的Reducer把数据划分成相应的<code>分区</code>（Partition）。在每个分区中，后台线程按照Key进行内存中排序，如果有一个<code>Combiner函数</code>（后续详解），它就在排序后的输出上运行。运行Combiner函数使得Map输出结果更紧凑，因此减少写到磁盘的数据和传递给Reducer的数据。</p>
+<p>每次内存缓冲区达到溢出阈值，就会新建一个溢出文件，因此在map任务写完其最后一个输出记录后，会有多个溢出文件。在任务完成之前，溢出文件被<code>合并</code>成一个已经分区且<code>已经排序</code>的输出文件。配合属性<code>mapreduce.task.io.sort.factor</code>控制着一次最多能合并多少个文件，默认是10。</p>
+<p>如果至少存在3个（<code>mapreduce.map.combine.minspills</code>属性）溢出文件时，则Combiner函数就会在输出文件写到磁盘之前再次运行。前面说过，Combiner可以在输入上反复运行，但并不影响最终结果。如果只有1或2个溢出文件，那么由于Map输出规模减少，因而不值得调用Combiner带来的开销，因此不会为该Map输出再次运行Combiner。</p>
+<p><img src="https://i.imgur.com/5EST6ho.png" alt></p>
+<p>将Map任务写到磁盘上的数据进行<code>压缩</code>会带来性能提升，因为压缩后数据量减少，写磁盘和网络传输的数据量就少了。默认情况下，输出是不压缩的，将<code>mapreduce.map.output.compress</code>设置为true，就可以启动该功能。另外还可以选择对应的压缩算法，由<code>mapreduce.map.output.compress.codec</code>指定。</p>
+<h3 id="Reduce端"><a href="#Reduce端" class="headerlink" title="Reduce端"></a>Reduce端</h3><p>现在转到处理过程的Reduce部分。Map输出文件位于运行Map任务节点上的本地磁盘。Reduce任务需要集群上若干个Map任务的Map输出作为其特殊的分区文件。每个Map任务的完成时间可能不同，因此在每个任务完成时，Reduce任务就开始复制其输出（通过HTTP的方式）。Reduce任务有少量的复制线程，因此能够并行取得Map输出，默认值是5个线程，可以通过<code>mapreduce.reduce.shuffle.parallelcopies</code>来设置。</p>
+<p>如果Map的输出相当小，会被复制到Reduce任务JVM的内存（缓冲区大小由<code>mapreduce.reduce.shuffle.input.buffer.percent</code>属性控制，指定用于此用途的堆空间的百分比），否则，Map输出会被复制到Reduce任务所在节点的磁盘上。一旦内存缓冲区达到阈值大小（由<code>mapreduce.reduce.shuffle.merge.percent</code>决定）或达到Map输出阈值（由<code>mapreduce.reduce.merge.inmem.threshold</code>控制），则合并后溢出写到磁盘中。如果指定Combiner，则在合并期间运行它以降低写入磁盘的数据量。</p>
+<p>随着磁盘上副本增多，后台线程会将它们合并为更大的、排好序的文件。这会为后面的合并节省一些时间。注意，为了合并，压缩的Map输出都必须在内存中被解压。</p>
+<p>复制完所有Map输出后，Reduce任务进入排序阶段（更恰当的说法是合并阶段，因为排序是在Map端进行的），这个阶段将合并Map输出，维持其顺序排序。这是循环进行的。比如，如果有50个Map输出，而合并因子是10（由<code>mapreduce.task.io.sort.factor</code>属性控制），合并将进行5趟，每趟将10个文件合并成一个文件，因此最后有5个中间文件。</p>
+<p>在最后阶段，即Reduce阶段，直接把数据输入reduce()方法，从而省略了一次磁盘往返行程，并没有将这5个文件合并成一个已排序的文件作为最后一趟。最后的合并可以来自内存和磁盘片段。</p>
+<p>每趟合并的文件数实际上和我们举例说明的有所不同。目标是合并最小数量的文件以便满足最后一趟的合并系数。因此如果有40个文件，我们不会在四趟中每趟合并10个文件从而得到4个文件。相反，第一趟只合并4个文件，随后的三趟合并完整的10个文件。在最后一趟中，4个已合并的文件和余下的6个（未合并的）文件合计10个文件。如图所示。</p>
+<p><img src="https://i.imgur.com/lbEqk6j.png" alt></p>
+<p>注意，这并没改变合并次数，它只是一个优化措施，目的是尽量减少写到磁盘的数据量，因为最后一趟总是直接合并到Reduce。</p>
+<h2 id="数据输出"><a href="#数据输出" class="headerlink" title="数据输出"></a>数据输出</h2><p>数据输出相对于输入就简单多了，因为没有分片的概念。对于前面介绍的输入格式，都有对应的输出格式。还记得我们是如何设置数据输出的吗？回顾一下代码。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置输出格式化类</span></span><br><span class="line">job.setOutputFormatClass(TextOutputFormat.class);</span><br><span class="line"><span class="comment">// 设置输出路径</span></span><br><span class="line">TextOutputFormat.setOutputPath(job, <span class="keyword">new</span> Path(args[<span class="number">1</span>]));</span><br></pre></td></tr></table></figure>
+<p>我们首先来看一下关于输出相关的类层次结构图。</p>
+<p><img src="https://i.imgur.com/otEbvBS.png" alt></p>
+<p>有了前面的铺垫后，我们可以直接看<code>TextOutputFormat</code>的源码，分析具体的步骤。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TextOutputFormat</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; <span class="keyword">extends</span> <span class="title">FileOutputFormat</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; </span>&#123;</span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> String SEPARATOR = <span class="string">"mapreduce.output.textoutputformat.separator"</span>;</span><br><span class="line">  <span class="comment">/**</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@deprecated</span> Use &#123;<span class="doctag">@link</span> #SEPARATOR&#125;</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="meta">@Deprecated</span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">static</span> String SEPERATOR = SEPARATOR;</span><br><span class="line">  <span class="comment">// 写入动作是由LineRecordWriter来完成的</span></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">LineRecordWriter</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt;</span></span><br><span class="line"><span class="class">    <span class="keyword">extends</span> <span class="title">RecordWriter</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; </span>&#123;</span><br><span class="line">    <span class="comment">// 行分隔符</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] NEWLINE =</span><br><span class="line">      <span class="string">"\n"</span>.getBytes(StandardCharsets.UTF_8);</span><br><span class="line">	<span class="comment">// 实际上就是我们在学习HDFS时使用的数据流写入</span></span><br><span class="line">    <span class="keyword">protected</span> DataOutputStream out;</span><br><span class="line">    <span class="comment">// key-value分隔符，默认是\t</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] keyValueSeparator;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">LineRecordWriter</span><span class="params">(DataOutputStream out, String keyValueSeparator)</span> </span>&#123;</span><br><span class="line">      <span class="keyword">this</span>.out = out;</span><br><span class="line">      <span class="keyword">this</span>.keyValueSeparator =</span><br><span class="line">        keyValueSeparator.getBytes(StandardCharsets.UTF_8);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">LineRecordWriter</span><span class="params">(DataOutputStream out)</span> </span>&#123;</span><br><span class="line">      <span class="keyword">this</span>(out, <span class="string">"\t"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Write the object to the byte stream, handling Text as a special</span></span><br><span class="line"><span class="comment">     * case.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> o the object to print</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> IOException if the write throws, we pass it on</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">writeObject</span><span class="params">(Object o)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">      <span class="keyword">if</span> (o <span class="keyword">instanceof</span> Text) &#123;</span><br><span class="line">        Text to = (Text) o;</span><br><span class="line">        out.write(to.getBytes(), <span class="number">0</span>, to.getLength());</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        out.write(o.toString().getBytes(StandardCharsets.UTF_8));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">write</span><span class="params">(K key, V value)</span></span></span><br><span class="line"><span class="function">      <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">boolean</span> nullKey = key == <span class="keyword">null</span> || key <span class="keyword">instanceof</span> NullWritable;</span><br><span class="line">      <span class="keyword">boolean</span> nullValue = value == <span class="keyword">null</span> || value <span class="keyword">instanceof</span> NullWritable;</span><br><span class="line">      <span class="keyword">if</span> (nullKey &amp;&amp; nullValue) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 写入key</span></span><br><span class="line">      <span class="keyword">if</span> (!nullKey) &#123;</span><br><span class="line">        writeObject(key);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 写入分隔符</span></span><br><span class="line">      <span class="keyword">if</span> (!(nullKey || nullValue)) &#123;</span><br><span class="line">        out.write(keyValueSeparator);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 写入value</span></span><br><span class="line">      <span class="keyword">if</span> (!nullValue) &#123;</span><br><span class="line">        writeObject(value);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 写入换行符</span></span><br><span class="line">      out.write(NEWLINE);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">synchronized</span> </span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">close</span><span class="params">(TaskAttemptContext context)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">      out.close();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 创建LineRecordWriter</span></span><br><span class="line">  <span class="keyword">public</span> RecordWriter&lt;K, V&gt; </span><br><span class="line">         getRecordWriter(TaskAttemptContext job</span><br><span class="line">                         ) <span class="keyword">throws</span> IOException, InterruptedException &#123;</span><br><span class="line">    Configuration conf = job.getConfiguration();</span><br><span class="line">    <span class="keyword">boolean</span> isCompressed = getCompressOutput(job);</span><br><span class="line">    <span class="comment">// 默认的key-value分隔符是\t</span></span><br><span class="line">    String keyValueSeparator= conf.get(SEPARATOR, <span class="string">"\t"</span>);</span><br><span class="line">    CompressionCodec codec = <span class="keyword">null</span>;</span><br><span class="line">    String extension = <span class="string">""</span>;</span><br><span class="line">    <span class="comment">// 如果设置了输出压缩</span></span><br><span class="line">    <span class="keyword">if</span> (isCompressed) &#123;</span><br><span class="line">      <span class="comment">// 获取编码器，如果没有指定就用默认的Gzip</span></span><br><span class="line">      Class&lt;? extends CompressionCodec&gt; codecClass = </span><br><span class="line">        getOutputCompressorClass(job, GzipCodec.class);</span><br><span class="line">      codec = ReflectionUtils.newInstance(codecClass, conf);</span><br><span class="line">      <span class="comment">// 文件后缀名，如.gz、.snappy等</span></span><br><span class="line">      extension = codec.getDefaultExtension();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 创建文件，获取到输出流</span></span><br><span class="line">    Path file = getDefaultWorkFile(job, extension);</span><br><span class="line">    FileSystem fs = file.getFileSystem(conf);</span><br><span class="line">    FSDataOutputStream fileOut = fs.create(file, <span class="keyword">false</span>);</span><br><span class="line">    <span class="keyword">if</span> (isCompressed) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">new</span> LineRecordWriter&lt;&gt;(</span><br><span class="line">          <span class="keyword">new</span> DataOutputStream(codec.createOutputStream(fileOut)),</span><br><span class="line">          keyValueSeparator);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">new</span> LineRecordWriter&lt;&gt;(fileOut, keyValueSeparator);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>在本章中，我们介绍了MapReduce程序的执行流程，大致可以分为输入、Map逻辑、Shuffle、Reduce逻辑和输出五个部分。在输入部分上，涉及到了数据分片，我们介绍了分片的概念，并分析了分片的处理流程。Shuffle部分是MapReduce最核心的知识点，理解Shuffle的概念对于任务的故障排查、调优等有很大帮助。输出与输入相互对应，支持各种格式的输出，不过相对比较简单。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>如果您觉得不错，请赞赏一下!</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="XiaoXiGua 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="XiaoXiGua 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/07/WordCount-Description/" rel="next" title="【Hadoop07】：WordCount详解">
+                <i class="fa fa-chevron-left"></i> 【Hadoop07】：WordCount详解
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": false,
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "douban", "sqq", "qzone", "weixin", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/girl.png" alt="XiaoXiGua">
+            
+              <p class="site-author-name" itemprop="name">XiaoXiGua</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MapReduce执行流程"><span class="nav-number">2.</span> <span class="nav-text">MapReduce执行流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#输入分片"><span class="nav-number">3.</span> <span class="nav-text">输入分片</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#分片概念"><span class="nav-number">3.1.</span> <span class="nav-text">分片概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TextInputFormat"><span class="nav-number">3.2.</span> <span class="nav-text">TextInputFormat</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#源码分析"><span class="nav-number">3.3.</span> <span class="nav-text">源码分析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Shuffle"><span class="nav-number">4.</span> <span class="nav-text">Shuffle</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Map端"><span class="nav-number">4.1.</span> <span class="nav-text">Map端</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reduce端"><span class="nav-number">4.2.</span> <span class="nav-text">Reduce端</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#数据输出"><span class="nav-number">5.</span> <span class="nav-text">数据输出</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">XiaoXiGua</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz',
+        appKey: 'wqOgPg0cXQillOPzrXScXSHa',
+        placeholder: '欢迎评论',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz", "wqOgPg0cXQillOPzrXScXSHa");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
