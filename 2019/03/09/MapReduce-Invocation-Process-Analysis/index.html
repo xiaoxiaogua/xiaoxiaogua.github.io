@@ -81,7 +81,7 @@
 
 <meta name="description" content="前言在上一章中，我们对WordCount程序进行了详细的分析，并简单介绍了WordCount程序的运行流程。今天我们从来详细分析下MapReduce的执行流程，并引出一些核心的概念与组件。本章非常重要，理解了运行机制和原理，不仅有助于排查故障，更能够根据需要进行系统调优。 在MapReduce中，最重要的一个环节是Shuffle，深刻理解Shuffle机制对于理解MapReduce程序的执行流程非">
 <meta property="og:type" content="article">
-<meta property="og:title" content="MapReduce执行流程分析">
+<meta property="og:title" content="【Hadoop08】：MapReduce执行流程分析">
 <meta property="og:url" content="http://yoursite.com/2019/03/09/MapReduce-Invocation-Process-Analysis/index.html">
 <meta property="og:site_name" content="小西瓜">
 <meta property="og:description" content="前言在上一章中，我们对WordCount程序进行了详细的分析，并简单介绍了WordCount程序的运行流程。今天我们从来详细分析下MapReduce的执行流程，并引出一些核心的概念与组件。本章非常重要，理解了运行机制和原理，不仅有助于排查故障，更能够根据需要进行系统调优。 在MapReduce中，最重要的一个环节是Shuffle，深刻理解Shuffle机制对于理解MapReduce程序的执行流程非">
@@ -94,9 +94,9 @@
 <meta property="og:image" content="https://i.imgur.com/5EST6ho.png">
 <meta property="og:image" content="https://i.imgur.com/lbEqk6j.png">
 <meta property="og:image" content="https://i.imgur.com/otEbvBS.png">
-<meta property="og:updated_time" content="2019-03-09T09:18:31.991Z">
+<meta property="og:updated_time" content="2019-03-10T03:03:05.761Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="MapReduce执行流程分析">
+<meta name="twitter:title" content="【Hadoop08】：MapReduce执行流程分析">
 <meta name="twitter:description" content="前言在上一章中，我们对WordCount程序进行了详细的分析，并简单介绍了WordCount程序的运行流程。今天我们从来详细分析下MapReduce的执行流程，并引出一些核心的概念与组件。本章非常重要，理解了运行机制和原理，不仅有助于排查故障，更能够根据需要进行系统调优。 在MapReduce中，最重要的一个环节是Shuffle，深刻理解Shuffle机制对于理解MapReduce程序的执行流程非">
 <meta name="twitter:image" content="https://i.imgur.com/tSViq80.png">
 
@@ -134,7 +134,7 @@
 
 
 
-  <title>MapReduce执行流程分析 | 小西瓜</title>
+  <title>【Hadoop08】：MapReduce执行流程分析 | 小西瓜</title>
   
 
 
@@ -278,7 +278,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">MapReduce执行流程分析</h2>
+          <h2 class="post-title" itemprop="name headline">【Hadoop08】：MapReduce执行流程分析</h2>
         
 
         <div class="post-meta">
@@ -340,7 +340,7 @@
 
           
           
-             <span id="/2019/03/09/MapReduce-Invocation-Process-Analysis/" class="leancloud_visitors" data-flag-title="MapReduce执行流程分析">
+             <span id="/2019/03/09/MapReduce-Invocation-Process-Analysis/" class="leancloud_visitors" data-flag-title="【Hadoop08】：MapReduce执行流程分析">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -509,6 +509,10 @@
 
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2019/03/10/MapReduce-Customize-Writable/" rel="prev" title="【Hadoop09】：MapReduce自定义Writable对象">
+                【Hadoop09】：MapReduce自定义Writable对象 <i class="fa fa-chevron-right"></i>
+              </a>
+            
           </div>
         </div>
       
@@ -616,7 +620,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-count">11</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
