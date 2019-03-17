@@ -79,22 +79,22 @@
 
 
 
-<meta name="description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，以及开启了日志聚合服务。">
+<meta name="description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，已经开启了日志聚合服务。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="【Hadoop12】：MapReduce用户日志">
 <meta property="og:url" content="http://yoursite.com/2019/03/17/MapReduce-User-Logs/index.html">
 <meta property="og:site_name" content="小西瓜">
-<meta property="og:description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，以及开启了日志聚合服务。">
+<meta property="og:description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，已经开启了日志聚合服务。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://i.imgur.com/J0NFK9s.png">
 <meta property="og:image" content="https://i.imgur.com/xBAIF8e.png">
 <meta property="og:image" content="https://i.imgur.com/pmqO8tm.png">
 <meta property="og:image" content="https://i.imgur.com/qnkiWh7.png">
 <meta property="og:image" content="https://i.imgur.com/k9wHgEd.png">
-<meta property="og:updated_time" content="2019-03-17T06:18:46.449Z">
+<meta property="og:updated_time" content="2019-03-17T06:31:06.179Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="【Hadoop12】：MapReduce用户日志">
-<meta name="twitter:description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，以及开启了日志聚合服务。">
+<meta name="twitter:description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，已经开启了日志聚合服务。">
 <meta name="twitter:image" content="https://i.imgur.com/J0NFK9s.png">
 
 
@@ -369,7 +369,7 @@
 
       
         <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。</p>
-<p>YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，以及开启了日志聚合服务。</p>
+<p>YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，已经开启了日志聚合服务。</p>
 <a id="more"></a>
 <h2 id="使用日志"><a href="#使用日志" class="headerlink" title="使用日志"></a>使用日志</h2><p>提交到YARN的任务，在执行时会产生一个日志文件（称作syslog），一个保存发送到标准输出数据的文件（称作stdout），一个保存标准错误的文件（称作stderr）。下面通过程序演示。</p>
 <p>WordCountMapper代码。</p>
