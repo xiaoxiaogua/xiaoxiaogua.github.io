@@ -79,19 +79,23 @@
 
 
 
-<meta name="description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
+<meta name="description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，以及开启了日志聚合服务。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="【Hadoop10】：MapReduce分区器">
-<meta property="og:url" content="http://yoursite.com/2019/03/10/MapReduce-Partitioner/index.html">
+<meta property="og:title" content="【Hadoop12】：MapReduce用户日志">
+<meta property="og:url" content="http://yoursite.com/2019/03/17/MapReduce-User-Logs/index.html">
 <meta property="og:site_name" content="小西瓜">
-<meta property="og:description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
+<meta property="og:description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，以及开启了日志聚合服务。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://i.imgur.com/A2c4JRu.png">
-<meta property="og:updated_time" content="2019-03-10T04:23:19.242Z">
+<meta property="og:image" content="https://i.imgur.com/J0NFK9s.png">
+<meta property="og:image" content="https://i.imgur.com/xBAIF8e.png">
+<meta property="og:image" content="https://i.imgur.com/pmqO8tm.png">
+<meta property="og:image" content="https://i.imgur.com/qnkiWh7.png">
+<meta property="og:image" content="https://i.imgur.com/k9wHgEd.png">
+<meta property="og:updated_time" content="2019-03-17T06:18:46.449Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【Hadoop10】：MapReduce分区器">
-<meta name="twitter:description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
-<meta name="twitter:image" content="https://i.imgur.com/A2c4JRu.png">
+<meta name="twitter:title" content="【Hadoop12】：MapReduce用户日志">
+<meta name="twitter:description" content="前言我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。 YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，以及开启了日志聚合服务。">
+<meta name="twitter:image" content="https://i.imgur.com/J0NFK9s.png">
 
 
 
@@ -121,13 +125,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/10/MapReduce-Partitioner/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/17/MapReduce-User-Logs/">
 
 
 
 
 
-  <title>【Hadoop10】：MapReduce分区器 | 小西瓜</title>
+  <title>【Hadoop12】：MapReduce用户日志 | 小西瓜</title>
   
 
 
@@ -254,7 +258,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/10/MapReduce-Partitioner/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/17/MapReduce-User-Logs/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="XiaoXiGua">
@@ -271,7 +275,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">【Hadoop10】：MapReduce分区器</h2>
+          <h2 class="post-title" itemprop="name headline">【Hadoop12】：MapReduce用户日志</h2>
         
 
         <div class="post-meta">
@@ -283,8 +287,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-10T12:22:45+08:00">
-                2019-03-10
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-17T14:18:00+08:00">
+                2019-03-17
               </time>
             
 
@@ -324,8 +328,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2019/03/10/MapReduce-Partitioner/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/10/MapReduce-Partitioner/" itemprop="commentCount"></span>
+                <a href="/2019/03/17/MapReduce-User-Logs/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/17/MapReduce-User-Logs/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -333,7 +337,7 @@
 
           
           
-             <span id="/2019/03/10/MapReduce-Partitioner/" class="leancloud_visitors" data-flag-title="【Hadoop10】：MapReduce分区器">
+             <span id="/2019/03/17/MapReduce-User-Logs/" class="leancloud_visitors" data-flag-title="【Hadoop12】：MapReduce用户日志">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -364,27 +368,29 @@
       
 
       
-        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，分区器（Partitioner）就出现了。</p>
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。</p>
+<p>YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，以及开启了日志聚合服务。</p>
 <a id="more"></a>
-<h2 id="Partitioner介绍"><a href="#Partitioner介绍" class="headerlink" title="Partitioner介绍"></a>Partitioner介绍</h2><p>分区器（Partitioner）可以根据自定义的规则，将数据划分到不同的分区内，每个分区由对应的Reducer进行处理。此外，分区的数量要和Reducer任务的数量保持一致，否则不同分区的数据无法分散到不同的Reducer任务上，就失去了分区的意义了。</p>
-<p>我们可以通过继承<code>Partitioner</code>抽象类来定义分区规则，首先来看一下该类的源码。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Partitioner</span>&lt;<span class="title">KEY</span>, <span class="title">VALUE</span>&gt; </span>&#123;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">/** </span></span><br><span class="line"><span class="comment">   * Get the partition number for a given key (hence record) given the total </span></span><br><span class="line"><span class="comment">   * number of partitions i.e. number of reduce-tasks for the job.</span></span><br><span class="line"><span class="comment">   *   </span></span><br><span class="line"><span class="comment">   * &lt;p&gt;Typically a hash function on a all or a subset of the key.&lt;/p&gt;</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> key the key to be partioned.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> value the entry value.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> numPartitions the total number of partitions.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@return</span> the partition number for the &lt;code&gt;key&lt;/code&gt;.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">int</span> <span class="title">getPartition</span><span class="params">(KEY key, VALUE value, <span class="keyword">int</span> numPartitions)</span></span>;</span><br><span class="line">  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>该类中只有一个<code>getPartition()</code>方法，在Map任务输出之前，会调用该方法将Key-Value作为参数传递，获取到对应的分区编号。</p>
-<p>默认情况下，我们是没有指定分区器的，Hadoop也为我们提供了一些内置的分区器，如图所示。</p>
-<p><img src="https://i.imgur.com/A2c4JRu.png" alt></p>
-<p>如果我们要使用自定义的Partitioner，需要在Job实例中进行设置，如下所示。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置分区器</span></span><br><span class="line">job.setPartitionerClass(YourPartitioner.class);</span><br><span class="line"><span class="comment">// Reducer任务的数量要和分区器中分区数量一致</span></span><br><span class="line">job.setNumReduceTasks(N);</span><br></pre></td></tr></table></figure>
-<h2 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h2><p>WordCount案例，对单词进行个数统计，将首字母为大写的单词与其他单词的统计结果分类存放。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Hadoop hadoop</span><br><span class="line">YARN yarn</span><br><span class="line">MapReduce mapreduce</span><br><span class="line">Spark spark</span><br><span class="line">Hadoop hadoop</span><br><span class="line">YARN yarn</span><br><span class="line">MapReduce mapreduce</span><br><span class="line">Spark spark</span><br></pre></td></tr></table></figure>
-<p>在这个案例中，只需要有2个分区就够了，一个分区存放首字母为大写的数据，另外一个分区存放其他数据。</p>
-<p>Mapper和Reducer的逻辑这里就不过多描述了，想必大家应该很熟悉。</p>
-<p>下面是我们自定义的Partitioner。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountPartitioner</span> <span class="keyword">extends</span> <span class="title">Partitioner</span>&lt;<span class="title">Text</span>, <span class="title">VIntWritable</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getPartition</span><span class="params">(Text text, VIntWritable vIntWritable, <span class="keyword">int</span> numPartitions)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 获取首字母</span></span><br><span class="line">        <span class="keyword">char</span> first = text.toString().charAt(<span class="number">0</span>);</span><br><span class="line">        <span class="keyword">if</span> (first &gt;= <span class="string">'A'</span> &amp;&amp; first &lt;= <span class="string">'Z'</span>) &#123;</span><br><span class="line">            <span class="comment">// 首字母大写</span></span><br><span class="line">            <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>在Job实例中，设置我们自定义的Partitioner以及Reducer任务的个数。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置分区器</span></span><br><span class="line">job.setPartitionerClass(WordCountPartitioner.class);</span><br><span class="line"><span class="comment">// Reducer任务的数量要和分区器中分区数量一致</span></span><br><span class="line">job.setNumReduceTasks(<span class="number">2</span>);</span><br></pre></td></tr></table></figure>
-<p>运行结果分为两个文件，由两个Reducer任务输出而成。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># part-r-00000</span><br><span class="line">Hadoop	2</span><br><span class="line">MapReduce	2</span><br><span class="line">Spark	2</span><br><span class="line">YARN	2</span><br><span class="line"></span><br><span class="line"># part-r-00001</span><br><span class="line">hadoop	2</span><br><span class="line">mapreduce	2</span><br><span class="line">spark	2</span><br><span class="line">yarn	2</span><br></pre></td></tr></table></figure>
-<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章我们学习了在MapReducer中分区器（Partitioner）的概念以及使用方式。分区器可以很方便的将数据进行分类，通过自定义的分区逻辑，返回不同数据对应的分区编号。此外，分区的数量要和Reducer任务的数量保持一致，否则不同类型的数据会由相同的Reducer任务处理，就没有分区的效果了。</p>
+<h2 id="使用日志"><a href="#使用日志" class="headerlink" title="使用日志"></a>使用日志</h2><p>提交到YARN的任务，在执行时会产生一个日志文件（称作syslog），一个保存发送到标准输出数据的文件（称作stdout），一个保存标准错误的文件（称作stderr）。下面通过程序演示。</p>
+<p>WordCountMapper代码。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountMapper</span> <span class="keyword">extends</span> <span class="title">Mapper</span>&lt;<span class="title">LongWritable</span>, <span class="title">Text</span>, <span class="title">Text</span>, <span class="title">VIntWritable</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 定义一个Logger</span></span><br><span class="line">    <span class="comment">// 这里使用的Commons Logging API</span></span><br><span class="line">    <span class="comment">// 实际上可以使用任何能写入log4j日志的API都行</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Log LOG  = LogFactory.getLog(WordCountMapper.class);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outKey = <span class="keyword">new</span> Text();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> VIntWritable outValue = <span class="keyword">new</span> VIntWritable(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">map</span><span class="params">(LongWritable key, Text value, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        String str = value.toString();</span><br><span class="line">        <span class="comment">// 将数据写入到syslog文件中</span></span><br><span class="line">        LOG.info(str);</span><br><span class="line">        <span class="comment">// 将数据写入到stdout文件中</span></span><br><span class="line">        System.out.println(str);</span><br><span class="line">        <span class="comment">// 将数据写入到stderr文件中</span></span><br><span class="line">        System.err.println(str);</span><br><span class="line">        <span class="keyword">for</span> (String word : str.split(<span class="string">" "</span>)) &#123;</span><br><span class="line">            outKey.set(word);</span><br><span class="line">            context.write(outKey, outValue);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>WordCountReducer代码。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountReducer</span> <span class="keyword">extends</span> <span class="title">Reducer</span>&lt;<span class="title">Text</span>, <span class="title">VIntWritable</span>, <span class="title">Text</span>, <span class="title">VIntWritable</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Log LOG = LogFactory.getLog(WordCountReducer.class);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> VIntWritable sum = <span class="keyword">new</span> VIntWritable();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">reduce</span><span class="params">(Text key, Iterable&lt;VIntWritable&gt; values, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> s = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (VIntWritable value : values) &#123;</span><br><span class="line">            s += value.get();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// syslog文件</span></span><br><span class="line">        LOG.info(<span class="string">"key:"</span> + key.toString() + <span class="string">", value:"</span> + s);</span><br><span class="line">        <span class="comment">// stdout文件</span></span><br><span class="line">        System.out.println(<span class="string">"key:"</span> + key.toString() + <span class="string">", value:"</span> + s);</span><br><span class="line">        <span class="comment">// stderr文件</span></span><br><span class="line">        System.err.println(<span class="string">"key:"</span> + key.toString() + <span class="string">", value:"</span> + s);</span><br><span class="line">        sum.set(s);</span><br><span class="line">        context.write(key, sum);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>WordCountRunner代码。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountRunner</span> <span class="keyword">extends</span> <span class="title">Configured</span> <span class="keyword">implements</span> <span class="title">Tool</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">run</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (args.length != <span class="number">2</span>) &#123;</span><br><span class="line">            System.out.println(<span class="string">"Usage: WordCountRunner &lt;input path&gt; &lt;output path&gt;"</span>);</span><br><span class="line">            System.exit(<span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        Job job = Job.getInstance(<span class="keyword">this</span>.getConf(), <span class="string">"WordCountExampleWithLog"</span>);</span><br><span class="line">        job.setJarByClass(WordCountRunner.class);</span><br><span class="line"></span><br><span class="line">        job.setInputFormatClass(TextInputFormat.class);</span><br><span class="line">        TextInputFormat.addInputPath(job, <span class="keyword">new</span> Path(args[<span class="number">0</span>]));</span><br><span class="line"></span><br><span class="line">        job.setMapperClass(WordCountMapper.class);</span><br><span class="line">        job.setMapOutputKeyClass(Text.class);</span><br><span class="line">        job.setMapOutputValueClass(VIntWritable.class);</span><br><span class="line"></span><br><span class="line">        job.setReducerClass(WordCountReducer.class);</span><br><span class="line">        job.setOutputKeyClass(Text.class);</span><br><span class="line">        job.setOutputValueClass(VIntWritable.class);</span><br><span class="line"></span><br><span class="line">        job.setOutputFormatClass(TextOutputFormat.class);</span><br><span class="line">        TextOutputFormat.setOutputPath(job, <span class="keyword">new</span> Path(args[<span class="number">1</span>]));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">boolean</span> success = job.waitForCompletion(<span class="keyword">true</span>);</span><br><span class="line">        <span class="keyword">return</span> success ? <span class="number">0</span> : <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> code = ToolRunner.run(<span class="keyword">new</span> WordCountRunner(), args);</span><br><span class="line">        System.exit(code);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="查看日志"><a href="#查看日志" class="headerlink" title="查看日志"></a>查看日志</h2><p>打开YARN的ResourceManager管理页面（8088端口），找到<code>FINISHED</code>状态的任务。</p>
+<p><img src="https://i.imgur.com/J0NFK9s.png" alt></p>
+<p>将最下方的滚动条拖动到最右方，找到<code>Tracking UI</code>项，点击<code>History</code>链接。</p>
+<p><img src="https://i.imgur.com/xBAIF8e.png" alt></p>
+<p>在最下方的<code>Successful</code>中，显示了成功完成的Map任务数量和Reduce任务数量。可以分别查看对应的Map日志和Reduce日志。</p>
+<p><img src="https://i.imgur.com/pmqO8tm.png" alt></p>
+<p>这里以Map任务为例，点击<code>3</code>，如图所示。</p>
+<p><img src="https://i.imgur.com/qnkiWh7.png" alt></p>
+<p>点击<code>logs</code>，进入日志查看页面。</p>
+<p><img src="https://i.imgur.com/k9wHgEd.png" alt></p>
+<p>页面中显示了<code>stderr</code>、<code>stdout</code>的日志信息，<code>syslog</code>日志由于内容比较多，可以点击超链接查看详情。</p>
+<p>注意，默认的日志级别是<code>INFO</code>，因此DEBUG级别的消息不在syslog任务日志文件中出现。然而，有时候又希望看到这些消息。这时可以适当设置<code>mapreduce.map.log.level</code>或者<code>mapreduce.reduce.log.level</code>。例如，我们想将Map任务的日志级别设置为DEBUG，在提交任务时增加<code>-D mapreduce.map.log.level=DEBUG</code>参数即可。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章介绍了MapReduce中如何打印日志。可以使用将日志信息打印到<code>stderr</code>、<code>stdout</code>以及<code>syslog</code>三个日志文件中，分别使用<code>System.err.println()</code>、<code>System.out.println()</code>和日志组件的相关方法即可。</p>
 
       
     </div>
@@ -438,8 +444,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/10/MapReduce-Customize-Writable/" rel="next" title="【Hadoop09】：MapReduce自定义Writable对象">
-                <i class="fa fa-chevron-left"></i> 【Hadoop09】：MapReduce自定义Writable对象
+              <a href="/2019/03/10/MapReduce-Combiner/" rel="next" title="【Hadoop11】：MapReduce Combiner">
+                <i class="fa fa-chevron-left"></i> 【Hadoop11】：MapReduce Combiner
               </a>
             
           </div>
@@ -447,10 +453,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/10/MapReduce-Combiner/" rel="prev" title="【Hadoop11】：MapReduce Combiner">
-                【Hadoop11】：MapReduce Combiner <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -605,7 +607,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Partitioner介绍"><span class="nav-number">2.</span> <span class="nav-text">Partitioner介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#案例"><span class="nav-number">3.</span> <span class="nav-text">案例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用日志"><span class="nav-number">2.</span> <span class="nav-text">使用日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查看日志"><span class="nav-number">3.</span> <span class="nav-text">查看日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li></ol></div>
             
 
           </div>
