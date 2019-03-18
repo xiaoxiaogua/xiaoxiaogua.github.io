@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言在关系型数据中，我们经常会使用连接（join）操作，进行相关的数据查询。例如，查询用户的订单信息、查询商品的分类信息等。在MapReduce程序中，有时我们也需要进行类似的操作，例如订单的信息存储在某些数据文件中，用户的信息存储在另外的数据文件中。下面我们使用MapReduce程序完成连接相关的操作。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【Hadoop15】：MapReduce案例-数据连接">
+<meta property="og:url" content="http://yoursite.com/2019/03/18/MapReduce-Join/index.html">
+<meta property="og:site_name" content="小西瓜">
+<meta property="og:description" content="前言在关系型数据中，我们经常会使用连接（join）操作，进行相关的数据查询。例如，查询用户的订单信息、查询商品的分类信息等。在MapReduce程序中，有时我们也需要进行类似的操作，例如订单的信息存储在某些数据文件中，用户的信息存储在另外的数据文件中。下面我们使用MapReduce程序完成连接相关的操作。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-03-18T14:58:52.119Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="【Hadoop15】：MapReduce案例-数据连接">
+<meta name="twitter:description" content="前言在关系型数据中，我们经常会使用连接（join）操作，进行相关的数据查询。例如，查询用户的订单信息、查询商品的分类信息等。在MapReduce程序中，有时我们也需要进行类似的操作，例如订单的信息存储在某些数据文件中，用户的信息存储在另外的数据文件中。下面我们使用MapReduce程序完成连接相关的操作。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/18/MapReduce-Join/">
+
+
+
+
+
+  <title>【Hadoop15】：MapReduce案例-数据连接 | 小西瓜</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">小西瓜</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/18/MapReduce-Join/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="XiaoXiGua">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/girl.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="小西瓜">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">【Hadoop15】：MapReduce案例-数据连接</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-18T22:56:37+08:00">
+                2019-03-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/03/18/MapReduce-Join/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/18/MapReduce-Join/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2019/03/18/MapReduce-Join/" class="leancloud_visitors" data-flag-title="【Hadoop15】：MapReduce案例-数据连接">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在关系型数据中，我们经常会使用连接（join）操作，进行相关的数据查询。例如，查询用户的订单信息、查询商品的分类信息等。在MapReduce程序中，有时我们也需要进行类似的操作，例如订单的信息存储在某些数据文件中，用户的信息存储在另外的数据文件中。下面我们使用MapReduce程序完成连接相关的操作。</p>
+<a id="more"></a>
+<h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>还是以订单案例作为需求，假设订单数据如下。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">1	小米5	1998.00	1001	2018-03-10 15:30:11</span><br><span class="line">2	茅台王子酒	366.00	1001	2018-03-10 15:30:11</span><br><span class="line">3	法国进口拉菲	708.00	1002	2018-03-10 15:30:12</span><br><span class="line">4	追风筝的人	35.60	1002	2018-03-10	15:30:12</span><br></pre></td></tr></table></figure>
+<p>每行数据由订单ID、商品名称、商品价格、用户ID、订单时间构成，字段使用TAB分隔。</p>
+<p>假设用户数据如下。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">1001	张三丰	男	1990-10-11</span><br><span class="line">1002	张无忌	男	1990-10-10</span><br><span class="line">1003	小龙女	女	1990-10-12</span><br></pre></td></tr></table></figure>
+<p>每行数据由用户ID、姓名、性别、出生日期构成，字段使用TAB分隔。</p>
+<p>要求计算结果为订单ID、商品名称、用户ID、用户姓名、用户性别、订单时间，例如。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">1	小米5	1998.00	1001	张三丰	男	2018-03-10 15:30:11</span><br></pre></td></tr></table></figure>
+<h2 id="实现（Reduce连接）"><a href="#实现（Reduce连接）" class="headerlink" title="实现（Reduce连接）"></a>实现（Reduce连接）</h2><p>我们知道，Reduce会将相同Key的数据作为分组，在reduce端聚合。我们这里要根据用户ID进行连接，因此在Map任务输出时，需要将用户ID作为Key。</p>
+<p>在Reduce端，根据用户ID拿到分组数据后，需要识别出数据是订单数据，还是用户数据，解析后再进行连接操作。需要注意的是，如果用户没有对应的订单，则不需要将该数据输出。</p>
+<p>首先定义<code>Order</code>对象，用于封装字段信息。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Order</span> <span class="keyword">implements</span> <span class="title">Writable</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> orderId = -<span class="number">1</span>; <span class="comment">// 订单ID</span></span><br><span class="line">    <span class="keyword">private</span> String productName = <span class="string">""</span>; <span class="comment">// 商品名称</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">double</span> producePrice; <span class="comment">// 商品价格</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> userId; <span class="comment">// 用户ID</span></span><br><span class="line">    <span class="keyword">private</span> String userName = <span class="string">""</span>; <span class="comment">// 用户姓名</span></span><br><span class="line">    <span class="keyword">private</span> String userGender = <span class="string">""</span>; <span class="comment">// 用户性别</span></span><br><span class="line">    <span class="keyword">private</span> String orderDateTime = <span class="string">""</span>; <span class="comment">// 订单时间</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">write</span><span class="params">(DataOutput out)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        out.writeInt(<span class="keyword">this</span>.orderId);</span><br><span class="line">        out.writeUTF(<span class="keyword">this</span>.productName);</span><br><span class="line">        out.writeDouble(<span class="keyword">this</span>.producePrice);</span><br><span class="line">        out.writeInt(<span class="keyword">this</span>.userId);</span><br><span class="line">        out.writeUTF(<span class="keyword">this</span>.userName);</span><br><span class="line">        out.writeUTF(<span class="keyword">this</span>.userGender);</span><br><span class="line">        out.writeUTF(<span class="keyword">this</span>.orderDateTime);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">readFields</span><span class="params">(DataInput in)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.orderId = in.readInt();</span><br><span class="line">        <span class="keyword">this</span>.productName = in.readUTF();</span><br><span class="line">        <span class="keyword">this</span>.producePrice = in.readDouble();</span><br><span class="line">        <span class="keyword">this</span>.userId = in.readInt();</span><br><span class="line">        <span class="keyword">this</span>.userName = in.readUTF();</span><br><span class="line">        <span class="keyword">this</span>.userGender = in.readUTF();</span><br><span class="line">        <span class="keyword">this</span>.orderDateTime = in.readUTF();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.orderId + <span class="string">"\t"</span> + <span class="keyword">this</span>.productName + <span class="string">"\t"</span> + <span class="keyword">this</span>.producePrice + <span class="string">"\t"</span> + <span class="keyword">this</span>.userId</span><br><span class="line">                + <span class="string">"\t"</span> + <span class="keyword">this</span>.userName + <span class="string">"\t"</span> + <span class="keyword">this</span>.userGender + <span class="string">"\t"</span> + <span class="keyword">this</span>.orderDateTime;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getOrderId</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> orderId;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setOrderId</span><span class="params">(<span class="keyword">int</span> orderId)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.orderId = orderId;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getProductName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> productName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setProductName</span><span class="params">(String productName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.productName = productName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">double</span> <span class="title">getProducePrice</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> producePrice;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setProducePrice</span><span class="params">(<span class="keyword">double</span> producePrice)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.producePrice = producePrice;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getUserId</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> userId;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUserId</span><span class="params">(<span class="keyword">int</span> userId)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.userId = userId;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getUserName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> userName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUserName</span><span class="params">(String userName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.userName = userName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getUserGender</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> userGender;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUserGender</span><span class="params">(String userGender)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.userGender = userGender;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getOrderDateTime</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> orderDateTime;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setOrderDateTime</span><span class="params">(String orderDateTime)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.orderDateTime = orderDateTime;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意，所有的字段都有默认值，是为了<code>write()</code>方法中避免空指针异常。</p>
+<p>下面是<code>OrderMapper</code>类的实现。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OrderMapper</span> <span class="keyword">extends</span> <span class="title">Mapper</span>&lt;<span class="title">LongWritable</span>, <span class="title">Text</span>, <span class="title">VIntWritable</span>, <span class="title">Order</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> VIntWritable outKey = <span class="keyword">new</span> VIntWritable();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">map</span><span class="params">(LongWritable key, Text value, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="comment">// 获取文件名称</span></span><br><span class="line">        FileSplit fileSplit = (FileSplit) context.getInputSplit();</span><br><span class="line">        String fileName = fileSplit.getPath().getName();</span><br><span class="line">        <span class="comment">// 根据文件名称判断输入数据是用户数据还是订单数据</span></span><br><span class="line">        String line = value.toString();</span><br><span class="line">        String[] fields = line.split(<span class="string">"\t"</span>);</span><br><span class="line">        Order order = <span class="keyword">new</span> Order();</span><br><span class="line">        <span class="keyword">int</span> userId;</span><br><span class="line">        <span class="keyword">if</span> (fileName.equals(<span class="string">"users"</span>)) &#123;</span><br><span class="line">            <span class="comment">// 用户数据</span></span><br><span class="line">            <span class="comment">// 1001	张三丰	男	1990-10-11</span></span><br><span class="line">            userId = Integer.parseInt(fields[<span class="number">0</span>]);</span><br><span class="line">            order.setUserName(fields[<span class="number">1</span>]);</span><br><span class="line">            order.setUserGender(fields[<span class="number">2</span>]);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">// 订单数据</span></span><br><span class="line">            <span class="comment">// 1	小米5	1998.00	1001	2018-03-10 15:30:11</span></span><br><span class="line">            userId = Integer.valueOf(fields[<span class="number">3</span>]);</span><br><span class="line">            order.setOrderId(Integer.valueOf(fields[<span class="number">0</span>]));</span><br><span class="line">            order.setProductName(fields[<span class="number">1</span>]);</span><br><span class="line">            order.setProducePrice(Double.valueOf(fields[<span class="number">2</span>]));</span><br><span class="line">            order.setOrderDateTime(fields[<span class="number">4</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        outKey.set(userId);</span><br><span class="line">        context.write(outKey, order);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>OrderMapper类中，根据输入文件的名称，判断数据是用户数据还是订单数据。</p>
+<p>下面是<code>OrderReducer</code>类的实现。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OrderReducer</span> <span class="keyword">extends</span> <span class="title">Reducer</span>&lt;<span class="title">VIntWritable</span>, <span class="title">Order</span>, <span class="title">Order</span>, <span class="title">NullWritable</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> NullWritable outValue = NullWritable.get();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">reduce</span><span class="params">(VIntWritable key, Iterable&lt;Order&gt; values, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        List&lt;Order&gt; orderList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        Order userInfo = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">for</span> (Order value : values) &#123;</span><br><span class="line">            <span class="keyword">if</span> (value.getOrderId() == -<span class="number">1</span>) &#123;</span><br><span class="line">                <span class="comment">// 用户数据</span></span><br><span class="line">                userInfo = <span class="keyword">new</span> Order();</span><br><span class="line">                userInfo.setUserName(value.getUserName());</span><br><span class="line">                userInfo.setUserGender(value.getUserGender());</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (value.getUserName().equals(<span class="string">""</span>)) &#123;</span><br><span class="line">                <span class="comment">// 订单数据</span></span><br><span class="line">                Order order = <span class="keyword">new</span> Order();</span><br><span class="line">                order.setOrderId(value.getOrderId());</span><br><span class="line">                order.setProductName(value.getProductName());</span><br><span class="line">                order.setProducePrice(value.getProducePrice());</span><br><span class="line">                order.setOrderDateTime(value.getOrderDateTime());</span><br><span class="line">                orderList.add(order);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 判断是否满足连接条件</span></span><br><span class="line">        <span class="keyword">if</span> (userInfo != <span class="keyword">null</span> &amp;&amp; !orderList.isEmpty()) &#123;</span><br><span class="line">            <span class="comment">// 连接</span></span><br><span class="line">            <span class="keyword">for</span> (Order order : orderList) &#123;</span><br><span class="line">                order.setUserId(key.get());</span><br><span class="line">                order.setUserName(userInfo.getUserName());</span><br><span class="line">                order.setUserGender(userInfo.getUserGender());</span><br><span class="line"></span><br><span class="line">                context.write(order, outValue);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在OrderReducer类中，将Order数据获取到后，根据特定的字段判断此对象是用户数据还是订单数据。此外，只有用户数据不为空并且存在订单数据时，才会将数据输出。</p>
+<p>最后是<code>OrderRunner</code>类的实现。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OrderRunner</span> <span class="keyword">extends</span> <span class="title">Configured</span> <span class="keyword">implements</span> <span class="title">Tool</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">run</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (args.length != <span class="number">3</span>) &#123;</span><br><span class="line">            System.out.println(<span class="string">"Usage: OrderRunner &lt;order input path&gt; &lt;user input path&gt; &lt;output path&gt;"</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Job job = Job.getInstance(<span class="keyword">this</span>.getConf(), <span class="string">"OrderExample"</span>);</span><br><span class="line">        job.setJarByClass(OrderRunner.class);</span><br><span class="line"></span><br><span class="line">        job.setInputFormatClass(TextInputFormat.class);</span><br><span class="line">        TextInputFormat.addInputPath(job, <span class="keyword">new</span> Path(args[<span class="number">0</span>]));</span><br><span class="line">        TextInputFormat.addInputPath(job, <span class="keyword">new</span> Path(args[<span class="number">1</span>]));</span><br><span class="line"></span><br><span class="line">        job.setMapperClass(OrderMapper.class);</span><br><span class="line">        job.setMapOutputKeyClass(VIntWritable.class);</span><br><span class="line">        job.setMapOutputValueClass(Order.class);</span><br><span class="line"></span><br><span class="line">        job.setReducerClass(OrderReducer.class);</span><br><span class="line">        job.setOutputKeyClass(Order.class);</span><br><span class="line">        job.setOutputValueClass(NullWritable.class);</span><br><span class="line"></span><br><span class="line">        job.setOutputFormatClass(TextOutputFormat.class);</span><br><span class="line">        TextOutputFormat.setOutputPath(job, <span class="keyword">new</span> Path(args[<span class="number">2</span>]));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">boolean</span> success = job.waitForCompletion(<span class="keyword">true</span>);</span><br><span class="line">        <span class="keyword">return</span> success ? <span class="number">0</span> : <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> code = ToolRunner.run(<span class="keyword">new</span> OrderRunner(), args);</span><br><span class="line">        System.exit(code);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>程序并不是很复杂，也能够正常运行，不过这种实现方式有一些缺点。数据是在Reduce端连接的，这就意味着所有数据（包括订单数据和用户数据）都要经过网络传输，Reducer节点负载很高，Map节点负载较低，并且没有做到真正的”并行”。</p>
+<p>下面我们来看另外一种实现方式。</p>
+<h2 id="实现（Map连接）"><a href="#实现（Map连接）" class="headerlink" title="实现（Map连接）"></a>实现（Map连接）</h2><p>我们换个思路：能否在Map阶段将数据连接呢？Map任务一般来说会有很多，在这个阶段完全是并行执行的，如果能在这个阶段完成连接，那么程序的性能将会大大提升。</p>
+<p>一般情况下，对于<code>大表连接小表</code>类型的任务，可以使用Map连接。举例来说，订单数据量可能非常大，而用户数据量则是有限的。此时我们可以在Map端直接加载用户数据到内存中，然后对于输入的订单数据进行匹配。</p>
+<p>那么如何在Map任务中获取到用户数据文件呢？有很多方式可以获取，下面我们介绍比较常见的两种。</p>
+<h3 id="从HDFS获取"><a href="#从HDFS获取" class="headerlink" title="从HDFS获取"></a>从HDFS获取</h3><p>从HDFS直接获取非常简单，在Map任务的初始化方法（setup()）中，实例化<code>FileSystem</code>对象，然后去指定路径读取文件即可。文件路径可以通过<code>-D your.file.path=path</code>的方式在提交任务时进行设置。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">setup</span><span class="params">(Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">    FileSystem fs = FileSystem.get(context.getConfiguration());</span><br><span class="line">    String p = context.getConfiguration().get(<span class="string">"your.file.path"</span>);</span><br><span class="line">    <span class="keyword">if</span> (p == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"No file specified."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    FSDataInputStream open = fs.open(<span class="keyword">new</span> Path(p));</span><br><span class="line">    BufferedReader br = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> InputStreamReader(open));</span><br><span class="line">    <span class="comment">// 读取数据</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>不过这种方式不太好，尤其是在Map任务数量比较多的情况下，每运行一个Map任务，都需要从HDFS上加载数据，效率不高。</p>
+<h3 id="分布式缓存"><a href="#分布式缓存" class="headerlink" title="分布式缓存"></a>分布式缓存</h3><p>另外一种方式是使用<code>分布式缓存</code>的形式在Map任务中加载数据。</p>
+<p>当用户启动一个作业时，Hadoop会吧<code>-files</code>、<code>-archives</code>和<code>-libjars</code>等选项锁指定的文件复制到HDFS上，并在任务运行之前，<code>NodeManager</code>将这些文件从HDFS复制到本地磁盘，使得任务在运行时能够访问文件。此时，这些文件就被视为”本地化”了。从任务的角度来看，这些文件就已经在那儿了，以符号链接的方式指向任务的工作目录。此外，由<code>-libjars</code>指定的文件会在任务启动前添加到任务的类路径（classpath）中。</p>
+<p>当然，如果你的任务没有使用<code>ToolRunner</code>的方式进行编码，你也可以使用<code>job.addCacheFile()</code>、<code>job.addFileToClassPath()</code>等方式进行设置，只是较为繁琐而已。</p>
+<p>下面我们演示如何使用分布式缓存来实现Map端连接。</p>
+<p>定义<code>User</code>类，用于保存用户数据。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">User</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Integer userId;</span><br><span class="line">    <span class="keyword">private</span> String userName;</span><br><span class="line">    <span class="keyword">private</span> String userGender;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Integer <span class="title">getUserId</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> userId;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUserId</span><span class="params">(Integer userId)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.userId = userId;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getUserName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> userName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUserName</span><span class="params">(String userName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.userName = userName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getUserGender</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> userGender;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setUserGender</span><span class="params">(String userGender)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.userGender = userGender;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>定义<code>OrderMapper</code>类，用于处理用户数据与订单数据的连接操作。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OrderMapper</span> <span class="keyword">extends</span> <span class="title">Mapper</span>&lt;<span class="title">LongWritable</span>, <span class="title">Text</span>, <span class="title">Order</span>, <span class="title">NullWritable</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Map&lt;Integer, User&gt; userInfo = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">setup</span><span class="params">(Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="comment">// 使用分布式缓存</span></span><br><span class="line">        String fileName = context.getConfiguration().get(<span class="string">"user.file.name"</span>);</span><br><span class="line">        File file = <span class="keyword">new</span> File(fileName);</span><br><span class="line">        BufferedReader br = <span class="keyword">new</span> BufferedReader(<span class="keyword">new</span> FileReader(file));</span><br><span class="line">        String line = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">while</span> ((line = br.readLine()) != <span class="keyword">null</span>) &#123;</span><br><span class="line">            String[] fields = line.split(<span class="string">"\t"</span>);</span><br><span class="line">            <span class="comment">// 1001	张三丰	男	1990-10-11</span></span><br><span class="line">            User user = <span class="keyword">new</span> User();</span><br><span class="line">            user.setUserId(Integer.parseInt(fields[<span class="number">0</span>]));</span><br><span class="line">            user.setUserName(fields[<span class="number">1</span>]);</span><br><span class="line">            user.setUserGender(fields[<span class="number">2</span>]);</span><br><span class="line">            userInfo.put(user.getUserId(), user);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">map</span><span class="params">(LongWritable key, Text value, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="comment">// 这里读取的都是订单数据了</span></span><br><span class="line">        <span class="comment">// 1	小米5	1998.00	1001	2018-03-10 15:30:11</span></span><br><span class="line">        String line = value.toString();</span><br><span class="line">        String[] fields = line.split(<span class="string">"\t"</span>);</span><br><span class="line">        <span class="keyword">int</span> userId = Integer.valueOf(fields[<span class="number">3</span>]);</span><br><span class="line">        User user = userInfo.get(userId);</span><br><span class="line">        <span class="keyword">if</span> (user != <span class="keyword">null</span>) &#123;</span><br><span class="line">            Order order = <span class="keyword">new</span> Order();</span><br><span class="line">            order.setOrderId(Integer.valueOf(fields[<span class="number">0</span>]));</span><br><span class="line">            order.setProductName(fields[<span class="number">1</span>]);</span><br><span class="line">            order.setProducePrice(Double.valueOf(fields[<span class="number">2</span>]));</span><br><span class="line">            order.setOrderDateTime(fields[<span class="number">4</span>]);</span><br><span class="line"></span><br><span class="line">            order.setUserId(userId);</span><br><span class="line">            order.setUserName(user.getUserName());</span><br><span class="line">            order.setUserGender(user.getUserGender());</span><br><span class="line">            context.write(order, NullWritable.get());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>定义<code>OrderRunner</code>类，配置MapReduce任务信息。注意，本例只有Map任务，没有Reduce任务。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OrderRunner</span> <span class="keyword">extends</span> <span class="title">Configured</span> <span class="keyword">implements</span> <span class="title">Tool</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">run</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (args.length != <span class="number">2</span>) &#123;</span><br><span class="line">            System.out.println(<span class="string">"Usage: OrderRunner &lt;input path&gt; &lt;output path&gt;"</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Job job = Job.getInstance(<span class="keyword">this</span>.getConf(), <span class="string">"MapJoinWithDistributedCache"</span>);</span><br><span class="line">        job.setJarByClass(OrderRunner.class);</span><br><span class="line"></span><br><span class="line">        job.setInputFormatClass(TextInputFormat.class);</span><br><span class="line">        TextInputFormat.addInputPath(job, <span class="keyword">new</span> Path(args[<span class="number">0</span>]));</span><br><span class="line"></span><br><span class="line">        job.setMapperClass(OrderMapper.class);</span><br><span class="line">        job.setMapOutputKeyClass(Order.class);</span><br><span class="line">        job.setMapOutputValueClass(NullWritable.class);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 不要Reducer了</span></span><br><span class="line">        job.setNumReduceTasks(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">        job.setOutputFormatClass(TextOutputFormat.class);</span><br><span class="line">        TextOutputFormat.setOutputPath(job, <span class="keyword">new</span> Path(args[<span class="number">1</span>]));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">boolean</span> success = job.waitForCompletion(<span class="keyword">true</span>);</span><br><span class="line">        <span class="keyword">return</span> success ? <span class="number">0</span> : <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> code = ToolRunner.run(<span class="keyword">new</span> OrderRunner(), args);</span><br><span class="line">        System.exit(code);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在提交任务时，通过<code>-files</code>以及<code>-D key=value</code>的形式指定缓存文件路径以及参数，如下所示。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ bin/hadoop jar mr/hadoop-example-1.0.jar org.victor.mapreduce.demo11.OrderRunner -D user.file.name=users -files <span class="built_in">test</span>/users /mr/demo11/input /mr/demo11/output</span><br></pre></td></tr></table></figure>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章介绍了如何使用MapReduce进行数据”连接”操作。并给出了两种实现方式：Reduce连接和Map连接。Reduce连接适用于被连接的数据集都非常大的情况下，但是效率较低（可以通过分区增加Reduce数量提高效率），不过更为通用。Map连接适用于被连接的数据集有一端数据量较少的情况，连接操作直接在Map任务中完成，性能较高。此外，我们还介绍了分布式缓存，用于在任务端加载本地数据，而不用每个任务都去HDFS上读取。虽然任务实现了，但是在MapReduce中实现较为复杂的操作还是比较繁琐的，这也是为什么要学习Hive、Spark等框架的原因。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>如果您觉得不错，请赞赏一下!</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="XiaoXiGua 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="XiaoXiGua 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/17/MapReduce-Flow-Statistics/" rel="next" title="【Hadoop14】：MapReduce案例-流量统计">
+                <i class="fa fa-chevron-left"></i> 【Hadoop14】：MapReduce案例-流量统计
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": false,
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "douban", "sqq", "qzone", "weixin", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/girl.png" alt="XiaoXiGua">
+            
+              <p class="site-author-name" itemprop="name">XiaoXiGua</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">17</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#需求"><span class="nav-number">2.</span> <span class="nav-text">需求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现（Reduce连接）"><span class="nav-number">3.</span> <span class="nav-text">实现（Reduce连接）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现（Map连接）"><span class="nav-number">4.</span> <span class="nav-text">实现（Map连接）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#从HDFS获取"><span class="nav-number">4.1.</span> <span class="nav-text">从HDFS获取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分布式缓存"><span class="nav-number">4.2.</span> <span class="nav-text">分布式缓存</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">XiaoXiGua</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz',
+        appKey: 'wqOgPg0cXQillOPzrXScXSHa',
+        placeholder: '欢迎评论',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz", "wqOgPg0cXQillOPzrXScXSHa");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
