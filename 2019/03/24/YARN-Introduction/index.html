@@ -79,19 +79,20 @@
 
 
 
-<meta name="description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
+<meta name="description" content="前言到目前为止，我们已经对Hadoop中HDFS、MapReduce有了一定的认识。在接下来几个章节，我们来学习另外一个框架YARN。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="【Hadoop10】：MapReduce分区器">
-<meta property="og:url" content="http://yoursite.com/2019/03/10/MapReduce-Partitioner/index.html">
+<meta property="og:title" content="【Hadoop18】YARN介绍">
+<meta property="og:url" content="http://yoursite.com/2019/03/24/YARN-Introduction/index.html">
 <meta property="og:site_name" content="小西瓜">
-<meta property="og:description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
+<meta property="og:description" content="前言到目前为止，我们已经对Hadoop中HDFS、MapReduce有了一定的认识。在接下来几个章节，我们来学习另外一个框架YARN。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://i.imgur.com/A2c4JRu.png">
-<meta property="og:updated_time" content="2019-03-10T04:23:19.242Z">
+<meta property="og:image" content="https://i.imgur.com/fz02BmA.png">
+<meta property="og:image" content="https://i.imgur.com/obe4E0s.png">
+<meta property="og:updated_time" content="2019-03-24T12:44:27.345Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【Hadoop10】：MapReduce分区器">
-<meta name="twitter:description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
-<meta name="twitter:image" content="https://i.imgur.com/A2c4JRu.png">
+<meta name="twitter:title" content="【Hadoop18】YARN介绍">
+<meta name="twitter:description" content="前言到目前为止，我们已经对Hadoop中HDFS、MapReduce有了一定的认识。在接下来几个章节，我们来学习另外一个框架YARN。">
+<meta name="twitter:image" content="https://i.imgur.com/fz02BmA.png">
 
 
 
@@ -121,13 +122,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/10/MapReduce-Partitioner/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/24/YARN-Introduction/">
 
 
 
 
 
-  <title>【Hadoop10】：MapReduce分区器 | 小西瓜</title>
+  <title>【Hadoop18】YARN介绍 | 小西瓜</title>
   
 
 
@@ -254,7 +255,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/10/MapReduce-Partitioner/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/24/YARN-Introduction/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="XiaoXiGua">
@@ -271,7 +272,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">【Hadoop10】：MapReduce分区器</h2>
+          <h2 class="post-title" itemprop="name headline">【Hadoop18】YARN介绍</h2>
         
 
         <div class="post-meta">
@@ -283,8 +284,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-10T12:22:45+08:00">
-                2019-03-10
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-24T20:43:32+08:00">
+                2019-03-24
               </time>
             
 
@@ -324,8 +325,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2019/03/10/MapReduce-Partitioner/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/10/MapReduce-Partitioner/" itemprop="commentCount"></span>
+                <a href="/2019/03/24/YARN-Introduction/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/24/YARN-Introduction/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -333,7 +334,7 @@
 
           
           
-             <span id="/2019/03/10/MapReduce-Partitioner/" class="leancloud_visitors" data-flag-title="【Hadoop10】：MapReduce分区器">
+             <span id="/2019/03/24/YARN-Introduction/" class="leancloud_visitors" data-flag-title="【Hadoop18】YARN介绍">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -364,27 +365,28 @@
       
 
       
-        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，分区器（Partitioner）就出现了。</p>
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>到目前为止，我们已经对Hadoop中HDFS、MapReduce有了一定的认识。在接下来几个章节，我们来学习另外一个框架YARN。</p>
 <a id="more"></a>
-<h2 id="Partitioner介绍"><a href="#Partitioner介绍" class="headerlink" title="Partitioner介绍"></a>Partitioner介绍</h2><p>分区器（Partitioner）可以根据自定义的规则，将数据划分到不同的分区内，每个分区由对应的Reducer进行处理。此外，分区的数量要和Reducer任务的数量保持一致，否则不同分区的数据无法分散到不同的Reducer任务上，就失去了分区的意义了。</p>
-<p>我们可以通过继承<code>Partitioner</code>抽象类来定义分区规则，首先来看一下该类的源码。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Partitioner</span>&lt;<span class="title">KEY</span>, <span class="title">VALUE</span>&gt; </span>&#123;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">/** </span></span><br><span class="line"><span class="comment">   * Get the partition number for a given key (hence record) given the total </span></span><br><span class="line"><span class="comment">   * number of partitions i.e. number of reduce-tasks for the job.</span></span><br><span class="line"><span class="comment">   *   </span></span><br><span class="line"><span class="comment">   * &lt;p&gt;Typically a hash function on a all or a subset of the key.&lt;/p&gt;</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> key the key to be partioned.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> value the entry value.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> numPartitions the total number of partitions.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@return</span> the partition number for the &lt;code&gt;key&lt;/code&gt;.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">int</span> <span class="title">getPartition</span><span class="params">(KEY key, VALUE value, <span class="keyword">int</span> numPartitions)</span></span>;</span><br><span class="line">  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>该类中只有一个<code>getPartition()</code>方法，在Map任务输出之前，会调用该方法将Key-Value作为参数传递，获取到对应的分区编号。</p>
-<p>默认情况下，我们是没有指定分区器的，Hadoop也为我们提供了一些内置的分区器，如图所示。</p>
-<p><img src="https://i.imgur.com/A2c4JRu.png" alt></p>
-<p>如果我们要使用自定义的Partitioner，需要在Job实例中进行设置，如下所示。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置分区器</span></span><br><span class="line">job.setPartitionerClass(YourPartitioner.class);</span><br><span class="line"><span class="comment">// Reducer任务的数量要和分区器中分区数量一致</span></span><br><span class="line">job.setNumReduceTasks(N);</span><br></pre></td></tr></table></figure>
-<h2 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h2><p>WordCount案例，对单词进行个数统计，将首字母为大写的单词与其他单词的统计结果分类存放。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Hadoop hadoop</span><br><span class="line">YARN yarn</span><br><span class="line">MapReduce mapreduce</span><br><span class="line">Spark spark</span><br><span class="line">Hadoop hadoop</span><br><span class="line">YARN yarn</span><br><span class="line">MapReduce mapreduce</span><br><span class="line">Spark spark</span><br></pre></td></tr></table></figure>
-<p>在这个案例中，只需要有2个分区就够了，一个分区存放首字母为大写的数据，另外一个分区存放其他数据。</p>
-<p>Mapper和Reducer的逻辑这里就不过多描述了，想必大家应该很熟悉。</p>
-<p>下面是我们自定义的Partitioner。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountPartitioner</span> <span class="keyword">extends</span> <span class="title">Partitioner</span>&lt;<span class="title">Text</span>, <span class="title">VIntWritable</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getPartition</span><span class="params">(Text text, VIntWritable vIntWritable, <span class="keyword">int</span> numPartitions)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 获取首字母</span></span><br><span class="line">        <span class="keyword">char</span> first = text.toString().charAt(<span class="number">0</span>);</span><br><span class="line">        <span class="keyword">if</span> (first &gt;= <span class="string">'A'</span> &amp;&amp; first &lt;= <span class="string">'Z'</span>) &#123;</span><br><span class="line">            <span class="comment">// 首字母大写</span></span><br><span class="line">            <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>在Job实例中，设置我们自定义的Partitioner以及Reducer任务的个数。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置分区器</span></span><br><span class="line">job.setPartitionerClass(WordCountPartitioner.class);</span><br><span class="line"><span class="comment">// Reducer任务的数量要和分区器中分区数量一致</span></span><br><span class="line">job.setNumReduceTasks(<span class="number">2</span>);</span><br></pre></td></tr></table></figure>
-<p>运行结果分为两个文件，由两个Reducer任务输出而成。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># part-r-00000</span><br><span class="line">Hadoop	2</span><br><span class="line">MapReduce	2</span><br><span class="line">Spark	2</span><br><span class="line">YARN	2</span><br><span class="line"></span><br><span class="line"># part-r-00001</span><br><span class="line">hadoop	2</span><br><span class="line">mapreduce	2</span><br><span class="line">spark	2</span><br><span class="line">yarn	2</span><br></pre></td></tr></table></figure>
-<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章我们学习了在MapReducer中分区器（Partitioner）的概念以及使用方式。分区器可以很方便的将数据进行分类，通过自定义的分区逻辑，返回不同数据对应的分区编号。此外，分区的数量要和Reducer任务的数量保持一致，否则不同类型的数据会由相同的Reducer任务处理，就没有分区的效果了。</p>
+<h2 id="YARN简介"><a href="#YARN简介" class="headerlink" title="YARN简介"></a>YARN简介</h2><p>Apache YARN(Yet Another Resource Negotiator)是Hadoop的<code>集群资源管理系统</code>。YARN被引入Hadoop 2，最初是为了改善MapReduce的实现，但它具有足够的通用性，通用可以支持其他的分布式计算模式。</p>
+<p>YARN提供请求和使用集群的API，但是这些API很少直接与用于用户代码。相反，用户代码中用的是分布式计算框架提供的更高层API，这些API建立在YARN之上且向用户因此了资源管理细节。站在YARN的角度上来看，MapReduce、Spark等框架，只是使用YARN的应用程序而已。</p>
+<p><img src="https://i.imgur.com/fz02BmA.png" alt></p>
+<p>还有一层是建立在应用层框架之上，例如Hive、Pig等都是运行在MapReduce、Spark之上的处理框架（实际上还有我们自己编写的MR、Spark程序等），它们不和YARN直接打交道。</p>
+<h2 id="YARN应用运行机制"><a href="#YARN应用运行机制" class="headerlink" title="YARN应用运行机制"></a>YARN应用运行机制</h2><p>YARN通过两类长期运行的守护进程提供自己的核心服务：管理集群上资源使用的<code>资源管理器</code>（Resource Manager）、运行在集群中所有节点上且能够启动和监控<code>容器</code>（Container）的<code>节点管理器</code>（Node Manager）。容器用于执行特定应用程序的进程，每个容器都有资源限制（内存、CPU等）。一个程序可以是一个Unix进程，也可以是一个Linux cgroup，取决于YARN的配置。</p>
+<p>下图描述了YARN是如何运行一个应用的。</p>
+<p><img src="https://i.imgur.com/obe4E0s.png" alt></p>
+<p>为了在YARN上运行一个应用，首先，客户端联系ResourceManager，要求它运行一个<code>application master</code>进程。然后，ResourceManager找到一个能够在容器中启动application master的NodeManager。准确地说，application master一旦运行起来以后能做些什么依赖于应用本身。有可能是在所处的容器中简单地运行一个计算，并将结果返回给客户端，或是想ResourceManager请求更多的容器，以用于运行一个分布式计算。后者是MapReduce YARN应用所做的事情。</p>
+<p>从上图中可以看出，YARN本身不会为应用的各个部分（客户端、Master和进程）彼此间通信提供任何手段。大多数重要的YARN应用使用某种形式的远程通信机制来向客户端传递状态更新和返回结果，但是这些通信机制都是专属于各应用的。</p>
+<h2 id="资源请求"><a href="#资源请求" class="headerlink" title="资源请求"></a>资源请求</h2><p>YARN有一个灵活的资源请求模型。当请求多个容器时，可以指定每个容器需要的计算机资源数量（内存和CPU），还可以指定对容器的本地限制要求。</p>
+<p>本地化对于确保分布式数据处理算法高校使用集群带宽非常重要，因此，YARN允许一个应用为所申请的容器指定本地限制。本地限制可用于申请位于指定节点或机架，或集群中任何位置（机架外）的容器。</p>
+<p>有时本地限制无法被满足，这种情况下要么不分配资源，或者可选择放松限制。例如，一个节点由于已经运行了别的容器而无法再启动新的容器，这时如果有应用请求该节点，则YARN将尝试在同一机架中的其他节点上启动一个容器，如果还不行，则会尝试集群中的任何一个节点。</p>
+<p>通常情况下，当启动一个容器用于处理HDFS数据块时，应用将会向这样的节点申请容器：存储该数据块三个副本的节点，或是存储这些副本的机架中的一个节点。如果都申请失败，则申请集群中的任意节点。</p>
+<p>YARN应用可以在运行中的任意时刻提出资源申请。例如，可以在最开始提出所有的请求，或者为了满足不断变化的应用需要，采用更为动态的方式在需要更多资源时提出请求。</p>
+<p>Spark采用了上述第一种方式，在集群上启动固定数量的执行器（Executor）。另一方面，MapReduce则分两步走，在最开始时申请map任务容器，reduce任务容器的启用则放在后期。同样，如果任何任务出现失败，将会另外申请容器以重新运行失败的任务。</p>
+<h2 id="应用生命周期"><a href="#应用生命周期" class="headerlink" title="应用生命周期"></a>应用生命周期</h2><p>YARN应用的生命周期差异性很大：有几秒的短期应用，也有连续运行几天甚至几个月的长期应用。与其关注应用运行多长时间，不如按照应用到用户运行的作业之间的映射关系对应用进行分类更有意义。最简单的模型是一个用户作业对应一个应用，这也是MapReduce采取的方式。</p>
+<p>第二种模型是，作业的每个工作流或每个用户对话对应一个应用。这种方法要比第一种情况效率更高，因为容器可以在作业之间重用，并且有可能缓存作业之间的中间数据，Spark采取的是这种模型。</p>
+<h2 id="构建YARN应用"><a href="#构建YARN应用" class="headerlink" title="构建YARN应用"></a>构建YARN应用</h2><p>从无到有编写一个YARN应用是一件相当复杂的事情，但在很多情况下不必这样。有很多现成的应用，在符合要求的情况下通常可以直接使用。例如，Spark、Flink、MapReduce等。</p>
+<p>不过，如果你真的想要尝试编写一个YARN应用，官方给出了一个<code>distributed shell</code>例子来说明如何编写YARN应用，该示例演示了如何使用YARN客户端API来处理客户端或application master与YARN守护进程之间的通信。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章介绍了YARN框架的基本概念，YARN是Hadoop集群的资源管理系统，构建在YARN之上的应用可以使用YARN来申请资源，运行一些计算程序。YARN主要分为ResourceManager和NodeManager，其中NodeManager负责为应用启动容器，用户编写的程序会在容器中运行。对于YARN来说，MapReduce、Spark都算是它的应用程序，而我们编写的程序又处于这些框架之上。</p>
 
       
     </div>
@@ -438,8 +440,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/10/MapReduce-Customize-Writable/" rel="next" title="【Hadoop09】：MapReduce自定义Writable对象">
-                <i class="fa fa-chevron-left"></i> 【Hadoop09】：MapReduce自定义Writable对象
+              <a href="/2019/03/24/MapReduce-TopN/" rel="next" title="【Hadoop17】：MapReduce案例-TopN">
+                <i class="fa fa-chevron-left"></i> 【Hadoop17】：MapReduce案例-TopN
               </a>
             
           </div>
@@ -447,10 +449,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/10/MapReduce-Combiner/" rel="prev" title="【Hadoop11】：MapReduce Combiner">
-                【Hadoop11】：MapReduce Combiner <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -605,7 +603,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Partitioner介绍"><span class="nav-number">2.</span> <span class="nav-text">Partitioner介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#案例"><span class="nav-number">3.</span> <span class="nav-text">案例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN简介"><span class="nav-number">2.</span> <span class="nav-text">YARN简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN应用运行机制"><span class="nav-number">3.</span> <span class="nav-text">YARN应用运行机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#资源请求"><span class="nav-number">4.</span> <span class="nav-text">资源请求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#应用生命周期"><span class="nav-number">5.</span> <span class="nav-text">应用生命周期</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#构建YARN应用"><span class="nav-number">6.</span> <span class="nav-text">构建YARN应用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">7.</span> <span class="nav-text">小结</span></a></li></ol></div>
             
 
           </div>
