@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言理想情况下，YARN应用发出的资源请求应该立即给予满足。然而现实中资源时有限的，在一个繁忙的集群上，一个应用经常需要等待才能得到所需的资源。YARN调度器的工作就是根据既定的策略为应用分配资源。调度通常是一个难题，并且没有一个所谓”最好”的策略，这也是为什么YARN提供了多种调度器和可配置策略供我们选择的原因。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【Hadoop19】：YARN调度器">
+<meta property="og:url" content="http://yoursite.com/2019/03/24/YARN-Scheduler/index.html">
+<meta property="og:site_name" content="小西瓜">
+<meta property="og:description" content="前言理想情况下，YARN应用发出的资源请求应该立即给予满足。然而现实中资源时有限的，在一个繁忙的集群上，一个应用经常需要等待才能得到所需的资源。YARN调度器的工作就是根据既定的策略为应用分配资源。调度通常是一个难题，并且没有一个所谓”最好”的策略，这也是为什么YARN提供了多种调度器和可配置策略供我们选择的原因。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://i.imgur.com/ROhEwa8.png">
+<meta property="og:image" content="https://i.imgur.com/eaRcazo.png">
+<meta property="og:image" content="https://i.imgur.com/Mecw97t.png">
+<meta property="og:image" content="https://i.imgur.com/AlzENvh.png">
+<meta property="og:updated_time" content="2019-03-24T14:44:28.906Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="【Hadoop19】：YARN调度器">
+<meta name="twitter:description" content="前言理想情况下，YARN应用发出的资源请求应该立即给予满足。然而现实中资源时有限的，在一个繁忙的集群上，一个应用经常需要等待才能得到所需的资源。YARN调度器的工作就是根据既定的策略为应用分配资源。调度通常是一个难题，并且没有一个所谓”最好”的策略，这也是为什么YARN提供了多种调度器和可配置策略供我们选择的原因。">
+<meta name="twitter:image" content="https://i.imgur.com/ROhEwa8.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/24/YARN-Scheduler/">
+
+
+
+
+
+  <title>【Hadoop19】：YARN调度器 | 小西瓜</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">小西瓜</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/24/YARN-Scheduler/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="XiaoXiGua">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/girl.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="小西瓜">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">【Hadoop19】：YARN调度器</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-24T22:43:35+08:00">
+                2019-03-24
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/03/24/YARN-Scheduler/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/24/YARN-Scheduler/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2019/03/24/YARN-Scheduler/" class="leancloud_visitors" data-flag-title="【Hadoop19】：YARN调度器">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>理想情况下，YARN应用发出的资源请求应该立即给予满足。然而现实中资源时有限的，在一个繁忙的集群上，一个应用经常需要等待才能得到所需的资源。YARN调度器的工作就是根据既定的策略为应用分配资源。调度通常是一个难题，并且没有一个所谓”最好”的策略，这也是为什么YARN提供了多种调度器和可配置策略供我们选择的原因。</p>
+<a id="more"></a>
+<h2 id="调度策略"><a href="#调度策略" class="headerlink" title="调度策略"></a>调度策略</h2><p>YARN中有三种调度器可用：FIFO调度器（FIFO Scheduler），容量调度器（Capacity Scheduler）和公平调度器（Fair Scheduler）。Apache版本的默认配置是容量调度器，CDH版本的默认配置是公平调度器。</p>
+<h3 id="FIFO-Scheduler"><a href="#FIFO-Scheduler" class="headerlink" title="FIFO Scheduler"></a>FIFO Scheduler</h3><p>FIFO调度器将应用放置在一个队列中，然后按照提交的顺序（先进先出）运行应用。首先为队列中第一个应用的请求分配资源，第一个应用的请求被满足后再依次为队列中下一个应用服务。</p>
+<p>FIFO调度器的优点是简单易懂，不需要任何配置，但是不适合共享集群。大的应用会占用集群中的所有资源，所以每个应用必须等待直到轮到自己运行。在一个共享集群中，更适合使用容量调度器或公平调度器。这两种调度器都允许长时间运行的作业能及时完成，同时也允许正在进行较小临时查询的用户能够在合理时间内得到返回结果。</p>
+<p>下面是FIFO调度器的调度模式。</p>
+<p><img src="https://i.imgur.com/ROhEwa8.png" alt></p>
+<p>在使用FIFO调度器时，小的作业一直被阻塞，因为大的作业先提交，而且将集群资源占满了。直到大作业运行完成，小作业才能够获取到资源开始执行。</p>
+<h3 id="Capacity-Scheduler"><a href="#Capacity-Scheduler" class="headerlink" title="Capacity Scheduler"></a>Capacity Scheduler</h3><p>容量调度器也很容易理解，YARN会创建一个专门的队列保证小的作业一提交就可以启动，由于队列容量是为那个队列中的作业所保留的，因此这种策略是以整个集群的利用率为代价的。这就意味着与FIFO调度器相比，大作业的执行时间要长。</p>
+<p><img src="https://i.imgur.com/eaRcazo.png" alt></p>
+<p>从图中可以看出，当提交第一个大任务的时候，该任务将队列中的资源全部占满，但是另外一个小队列（queue B）没有受到影响，因此第二个小任务提交时就能够立即获取到资源并开始运行。</p>
+<h3 id="Fair-Scheduler"><a href="#Fair-Scheduler" class="headerlink" title="Fair Scheduler"></a>Fair Scheduler</h3><p>公平调度器目前使用的最为广泛，它不需要预留一定量的资源，因为调度器会在所有运行的作业之间动态平衡资源。</p>
+<p><img src="https://i.imgur.com/Mecw97t.png" alt></p>
+<p>第一个大作业启动时，它也是唯一运行的作业，因而获得集群中所有的资源。当第二个小作业启动时，它被分配到集群的一半资源，这样每个作业都能公平共享资源。注意，从第二个作业的启动到获得公平共享资源之间会有时间滞后，因为它必须等待第一个作业使用的容器用完并释放出资源。当小作业结束且不再申请资源后，大作业将再次使用全部的集群资源。最终的结果是：既得到了较高的集群利用率，又能保证小作业能及时完成。</p>
+<h2 id="调度器配置"><a href="#调度器配置" class="headerlink" title="调度器配置"></a>调度器配置</h2><p>下面我们主要讨论容量调度器和公平调度器的配置选项。</p>
+<h3 id="容量调度器配置"><a href="#容量调度器配置" class="headerlink" title="容量调度器配置"></a>容量调度器配置</h3><p>容量调度器允许多个组织共享一个Hadoop集群，每个组织可以分片到全部集群资源的一部分。每个组织被配置一个专门的队列，每个队列被配置为可以使用一定的集群资源。队列可以进一步按层次划分，这样每个组织内的不同用户能够共享该组织队列所分配的资源。在一个队列内，使用FIFO调度策略对应用进行调度。</p>
+<p>单个作业使用的资源不会超过其队列容量。然而，如果队列中有多个作业，并且队列资源不够用了呢？这时如果仍有可用的空闲资源，那么容量调度器可能会将空余的资源分配给队列中的作业，哪怕这会超出队列容量。这称为”弹性队列”（queue elasticity）。</p>
+<p>正常操作时，容量调度器不会通过强行中止来抢占容器。因此，如果一个队列一开始资源够用，然后随着需求增长，资源开始不够用时，那么这个队列只能等着其他队列释放容器资源。缓解这种情况的方法时，为队列设置一个最大容量限制，这样这个队列就不会过多侵占其他队列的容量了。当然，这样做是以牺牲队列弹性为代价的，因此需要在不断尝试和失败中找到一个合理的折中。</p>
+<p>假设一个队列的层次结构如下。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">root</span><br><span class="line">|---prod</span><br><span class="line">|---dev</span><br><span class="line">	|---eng</span><br><span class="line">	|---science</span><br></pre></td></tr></table></figure>
+<p>下面是基于上述队列层次的容量调度器配置文件，文件名为<code>capacity-scheduler.xml</code>。在<code>root</code>队列下定义两个队列：<code>prod</code>和<code>dev</code>，分别占用40%和60%的容量。需要注意的是，对特定队列进行配置时，是通过以下形式的配置属性<code>yarn.scheduler.capacity.&lt;queue-path&gt;.&lt;sub-property&gt;</code>进行设置的，其中，<queue-path>表示队列的层次路径（用圆点隔开），例如<code>root.prod</code>。</queue-path></p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0"&gt;</span></span><br><span class="line"><span class="meta">&lt;configuration&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 指定root下有2个队列，prod和dev --&gt;</span></span><br><span class="line"><span class="meta">	&lt;property&gt;</span></span><br><span class="line"><span class="meta">  		&lt;name&gt;yarn.scheduler.capacity.root.queues&lt;/name&gt;</span></span><br><span class="line"><span class="meta">		&lt;value&gt;prod,dev&lt;/value&gt;</span></span><br><span class="line"><span class="meta">	&lt;/property&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 指定dev下有2个队列，eng和science --&gt;</span></span><br><span class="line"><span class="meta">	&lt;property&gt;</span></span><br><span class="line"><span class="meta">  		&lt;name&gt;yarn.scheduler.capacity.root.dev.queues&lt;/name&gt;</span></span><br><span class="line"><span class="meta">		&lt;value&gt;eng,science&lt;/value&gt;</span></span><br><span class="line"><span class="meta">	&lt;/property&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 指定root下的prod队列可占用集群的40%资源（可能占用全部资源，没有设置最大上限） --&gt;</span></span><br><span class="line"><span class="meta">	&lt;property&gt;</span></span><br><span class="line"><span class="meta">  		&lt;name&gt;yarn.scheduler.capacity.root.prod.capacity&lt;/name&gt;</span></span><br><span class="line"><span class="meta">		&lt;value&gt;40&lt;/value&gt;</span></span><br><span class="line"><span class="meta">	&lt;/property&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 指定root下的dev队列可占用集群的60%资源 --&gt;</span></span><br><span class="line"><span class="meta">	&lt;property&gt;</span></span><br><span class="line"><span class="meta">  		&lt;name&gt;yarn.scheduler.capacity.root.dev.capacity&lt;/name&gt;</span></span><br><span class="line"><span class="meta">		&lt;value&gt;60&lt;/value&gt;</span></span><br><span class="line"><span class="meta">	&lt;/property&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 指定root.dev队列的最大容量被设置为75%（从prod抢占15%） --&gt;</span></span><br><span class="line"><span class="meta">	&lt;property&gt;</span></span><br><span class="line"><span class="meta">  		&lt;name&gt;yarn.scheduler.capacity.root.dev.maximun-capacity&lt;/name&gt;</span></span><br><span class="line"><span class="meta">		&lt;value&gt;75&lt;/value&gt;</span></span><br><span class="line"><span class="meta">	&lt;/property&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 指定dev.eng队列可占用dev队列的50%资源（或者全部，因为没有设置最大值） --&gt;</span></span><br><span class="line"><span class="meta">	&lt;property&gt;</span></span><br><span class="line"><span class="meta">  		&lt;name&gt;yarn.scheduler.capacity.root.dev.eng.capacity&lt;/name&gt;</span></span><br><span class="line"><span class="meta">		&lt;value&gt;50&lt;/value&gt;</span></span><br><span class="line"><span class="meta">	&lt;/property&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 指定dev.science队列可占用dev队列的50%资源（或者全部，因为没有设置最大值） --&gt;</span></span><br><span class="line"><span class="meta">	&lt;property&gt;</span></span><br><span class="line"><span class="meta">  		&lt;name&gt;yarn.scheduler.capacity.root.dev.science.capacity&lt;/name&gt;</span></span><br><span class="line"><span class="meta">		&lt;value&gt;50&lt;/value&gt;</span></span><br><span class="line"><span class="meta">	&lt;/property&gt;</span></span><br><span class="line"><span class="meta">&lt;/configuration&gt;</span></span><br></pre></td></tr></table></figure>
+<p>将应用放置在哪个队列中，取决于应用本身。例如，在MapReduce中，可以通过设置属性<code>mapreduce.job.queuename</code>来指定要用的队列。如果队列不存在，则在提交时会发生错误。如果不指定队列，那么应用将被放在一个名为<code>default</code>的默认队列中。</p>
+<p>注意，对于容量调度器，队列名应该是队列层次名的最后一部分，完整的队列层次名是不会被识别的。例如，对于上述配置，<code>prd</code>和<code>eng</code>是合法的队列名，但<code>root.dev.eng</code>和<code>dev.eng</code>作为队列名则是无效的。</p>
+<h3 id="公平调度器配置"><a href="#公平调度器配置" class="headerlink" title="公平调度器配置"></a>公平调度器配置</h3><p>公平调度器旨在为所有运行的应用公平分配资源。在前面介绍公平调度器时展示了同一个队列中的应用是如何实现资源公平共享的。然而公平共享实际也可以在多个队列间工作。</p>
+<p>假如两个用户A和B，分别拥有自己的队列。A启动一个作业，在B没有需求时A会分片到全部可用资源；当A的作业仍在运行时B启动一个作业，一段时间后，按照我们先前看到的方式，每个作业都用到了一半的集群资源。这时，如果B启动第二个作业并且其他作业仍然在运行中，那么第二个作业将和B的第一个作业共享资源，因此B的每个作业将占用四分之一的集群资源，而A仍继续占用一半的集群资源。最终的结果就是资源在用户之间实现了公平共享。</p>
+<p><img src="https://i.imgur.com/AlzENvh.png" alt></p>
+<h4 id="启用公平调度器"><a href="#启用公平调度器" class="headerlink" title="启用公平调度器"></a>启用公平调度器</h4><p>Apache版本的Hadoop默认使用容量调度器，如果要使用公平调度器，需要将<code>yarn-site.xml</code>文件中的<code>yarn.resourcemanager.scheduler.class</code>设置为公平调度器的完全限定名：<code>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</code>。</p>
+<h4 id="队列配置"><a href="#队列配置" class="headerlink" title="队列配置"></a>队列配置</h4><p>通过一个名为<code>fair-scheduler.xml</code>的文件对公平调度器进行配置，该文件位于类路径下。当没有该文件时，公平调度器的工作策略如同先前所描述的一样：每个应用放置在一个以用户名命名的队列中，队列是在用户提交第一个应用时动态创建的。</p>
+<p>通过该文件可以为每个队列进行配置。例如定义队列、为队列设置权重等。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0"&gt;</span></span><br><span class="line"><span class="meta">&lt;allocations&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 设置队列的默认调度策略 --&gt;</span></span><br><span class="line"><span class="meta">	&lt;defaultQueueSchedulingPolicy&gt;fair&lt;/defaultQueueSchedulingPolicy&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 定义prod队列，权重是40，资源按照40%的比例分片给prod队列 --&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 权重并不是百分比，也可以分别指定2和3的权限，效果上是一样的 --&gt;</span></span><br><span class="line"><span class="meta">	&lt;queue name="prod"&gt;</span></span><br><span class="line"><span class="meta">		&lt;weight&gt;40&lt;/weight&gt;</span></span><br><span class="line"><span class="meta">		&lt;!-- prod队列的调度策略设置为fifo --&gt;</span></span><br><span class="line"><span class="meta">		&lt;scheduingPolocy&gt;fifo&lt;/schedulingPolicy&gt;</span></span><br><span class="line"><span class="meta">	&lt;/queue&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 定义dev队列，权重是60，该队列下又定义了eng和science队列 --&gt;</span></span><br><span class="line"><span class="meta">	&lt;queue name="dev"&gt;</span></span><br><span class="line"><span class="meta">		&lt;weight&gt;60&lt;/weight&gt;</span></span><br><span class="line"><span class="meta">		&lt;!-- 没有指定权重，下面两个队列会被平均分配 --&gt;</span></span><br><span class="line"><span class="meta">		&lt;queue name="eng" /&gt;</span></span><br><span class="line"><span class="meta">		&lt;queue name="science" /&gt;</span></span><br><span class="line"><span class="meta">	&lt;/queue&gt;</span></span><br><span class="line"><span class="meta">	&lt;!-- 设置队列放置策略 --&gt;</span></span><br><span class="line"><span class="meta">	&lt;queuePlacementPolicy&gt;</span></span><br><span class="line"><span class="meta">		&lt;!-- 策略会从上到下被尝试，直到匹配成功 --&gt;</span></span><br><span class="line"><span class="meta">		&lt;!-- 尝试将应用放进所指定的队列中，如果没有指明或队列不存在，则规则不匹配 --&gt;</span></span><br><span class="line"><span class="meta">		&lt;rule name="specified" create="false" /&gt;</span></span><br><span class="line"><span class="meta">		&lt;!-- 尝试将应用放在以用户的主Unix组名命名的队列中，如果没有，则规则不匹配 --&gt;</span></span><br><span class="line"><span class="meta">		&lt;rule name="primaryGroup" create="false" /&gt;</span></span><br><span class="line"><span class="meta">		&lt;!-- 当上面都不匹配时，这条策略兜底，把应用放入default队列 --&gt;</span></span><br><span class="line"><span class="meta">		&lt;rule name="default" queue="dev.eng" /&gt;</span></span><br><span class="line"><span class="meta">	&lt;/queuePlacementPolicy&gt;</span></span><br><span class="line"><span class="meta">&lt;/allocations&gt;</span></span><br></pre></td></tr></table></figure>
+<p>需要注意的是，当设置权重时，记住要考虑默认队列和动态创建的队列。虽然没有在文件中为它们指定权重，但它们仍有值为1的权重。</p>
+<p>在上面的配置中，我们希望每个生产性作业能够顺序运行且在最短可能的时间内结束，所以prod队列使用了FIFO调度策略。值得注意的是，在prod和dev之间、eng和science队列之间及内部划分资源仍然使用了公平调度。</p>
+<p>另外，每个队列仍可配置最大和最小资源数量，及最大可运行应用的数量。最小资源数量不是一个硬性的限制，但是调度器常用它对资源分配进行优先排序。如果两个队列的资源都低于它们的公平共享额度，那么远低于最小资源数量的那个队列有限被分配资源。最小资源数量也会用于接下来介绍的抢占行为。</p>
+<h4 id="抢占"><a href="#抢占" class="headerlink" title="抢占"></a>抢占</h4><p>在一个繁忙的集群中，当作业被提交给一个空队列时，作业不会立即启动，直到集群上已经运行的作业释放了资源。为了使作业从提交到执行所需的时间可预测，公平调度器支持”抢占”（preemption）功能。</p>
+<p>所谓抢占，就是允许调度器终止那些占用资源超过了其公平共享份额的队列的容器，这些容器资源释放后可以分片给资源数量低于应得份额的队列。注意，抢占会降低整个集群的效率，因为被终止的containers需要重新执行。</p>
+<p>通过将<code>yarn.scheduler.fair.preemtion</code>设置为true，可以全面启用抢占功能。有两个相关的抢占超时设置：一个用于最小共享，另一个用于公平共享，两者设定时间均为秒级。默认情况下，如果超时参数均不设置。所以为了允许抢占容器，需要至少设置其中一个超时参数。</p>
+<p>如果队列在最小共享超时指定的时间内未获得被承诺的最小共享资源，调度器就会抢占其他容器。可以通过配置文件的顶层元素<code>defaultMinSharePreemptionTimeout</code>为所有队列设置默认的超时时间，还可以通过设置每个队列的<code>minSharePreemptionTimeout</code>元素来为单个队列指定超时时间。</p>
+<p>类似，如果队列在公平共享超时指定的时间内获得的资源仍然低于其公平共享份额的一半，那么调度器就会抢占其他容器。可以通过配置文件中的顶层元素<code>defaultFairSharePreemptionTimeout</code>为所有队列设置默认的超时时间，还可以通过设置每个队列的<code>fairSharePreemptionTimeout</code>元素来为单个队列指定超时时间。通过设置<code>defaultFairSharePreemptionThreshold</code>和<code>fairSharePreemptionThreshold</code>可以修改超时阈值，默认值时0.5。</p>
+<h2 id="延迟调度"><a href="#延迟调度" class="headerlink" title="延迟调度"></a>延迟调度</h2><p>所有的YARN调度器都试图以本地请求为重。在一个繁忙的集群上，如果一个应用请求某个节点，那么极有可能此时有其他容器正在该节点上运行。显而易见的处理是，立刻放宽本地行需求，在同一机架中分配一个容器。然而，通过实践发现，此时如果等待一小段时间（不超过几秒），能够戏剧性的增加在所请求的节点上分配到一个容器的机会，从而可以提高集群的效率。这个特性称之为<code>延迟调度</code>。容量调度器和公平调度器都支持延迟调度。</p>
+<p>YARN中的每个NodeNamager周期性的（默认每秒一次）向ResourceManager发送心跳请求。心跳中携带了NodeManager中正运行的容器、新容器可用的资源等信息，这样对于一个计划运行一个容器的应用而言，每个心跳就是一个潜在的调度机会。</p>
+<p>当使用延迟调度时，调度器不会简单的使用它收到的第一个调度机会，而是等待设定的最大数目的调度机会发生，然后才放松本地性限制并接收下一个调度机会。</p>
+<p>对于容量调度器，可以通过设置<code>yarn.scheduler.capacity.node-locality-delay</code>来配置延迟调度。设置为正整数，表示调度器在放松节点限制、改为匹配同一机架上的其他节点前，准备错过的调度机会的数量。</p>
+<p>公平调度器也使用调度机会的数量来决定延迟时间，尽管是使用集群规模的比例来表示这个值。例如将<code>yarn.scheduler.fair.locality.threshold.node</code>设置为0.5，表示调度器在接受同一机架中的其他节点之间，将一直等待直到集群中的一半节点都已经给过调度机会。还有个相关的属性<code>yarn.scheduler.fair.locality.threshold.rack</code>，表示在接受另一个机架替代所申请的机架之前需要等待的时长阈值。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章介绍了YARN所支持的几种调度器，分别是FIFO Scheduler、Capacity Scheduler以及Fair Scheduler。其中容量调度器是Apache版本的Hadoop默认配置的调度器，公平调度器则是CDH版本的Hadoop默认配置的调度器。每种调度器都有其优点，应当根据实际情况选择不同的调度器。不过在实际场景中，公平调度器使用的较多，其次是容量调度器。公平调度器和容量调度器都支持延迟调度策略，尽可能的使得任务在数据本地节点运行，简单来说就是在真正分配NodeManager创建容器时，等待一定时间，希望能在数据所在的节点启动容器。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>如果您觉得不错，请赞赏一下!</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="XiaoXiGua 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="XiaoXiGua 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/24/YARN-Introduction/" rel="next" title="【Hadoop18】YARN介绍">
+                <i class="fa fa-chevron-left"></i> 【Hadoop18】YARN介绍
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": false,
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "douban", "sqq", "qzone", "weixin", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/girl.png" alt="XiaoXiGua">
+            
+              <p class="site-author-name" itemprop="name">XiaoXiGua</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">21</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#调度策略"><span class="nav-number">2.</span> <span class="nav-text">调度策略</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#FIFO-Scheduler"><span class="nav-number">2.1.</span> <span class="nav-text">FIFO Scheduler</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Capacity-Scheduler"><span class="nav-number">2.2.</span> <span class="nav-text">Capacity Scheduler</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Fair-Scheduler"><span class="nav-number">2.3.</span> <span class="nav-text">Fair Scheduler</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#调度器配置"><span class="nav-number">3.</span> <span class="nav-text">调度器配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#容量调度器配置"><span class="nav-number">3.1.</span> <span class="nav-text">容量调度器配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#公平调度器配置"><span class="nav-number">3.2.</span> <span class="nav-text">公平调度器配置</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#启用公平调度器"><span class="nav-number">3.2.1.</span> <span class="nav-text">启用公平调度器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#队列配置"><span class="nav-number">3.2.2.</span> <span class="nav-text">队列配置</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#抢占"><span class="nav-number">3.2.3.</span> <span class="nav-text">抢占</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#延迟调度"><span class="nav-number">4.</span> <span class="nav-text">延迟调度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">XiaoXiGua</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz',
+        appKey: 'wqOgPg0cXQillOPzrXScXSHa',
+        placeholder: '欢迎评论',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz", "wqOgPg0cXQillOPzrXScXSHa");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
