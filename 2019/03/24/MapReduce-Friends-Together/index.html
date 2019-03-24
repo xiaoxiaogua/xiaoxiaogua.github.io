@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言本章来学习一个相对复杂一些的案例：共同好友。想必大家都用过QQ、微信之类的聊天工具吧，A是B的好友，而B和C是好友，那么A和C的共同好友就是B。下面我们使用MapReduce的方式实现计算共同好友。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【Hadoop16】：MapReduce案例-共同好友">
+<meta property="og:url" content="http://yoursite.com/2019/03/24/MapReduce-Friends-Together/index.html">
+<meta property="og:site_name" content="小西瓜">
+<meta property="og:description" content="前言本章来学习一个相对复杂一些的案例：共同好友。想必大家都用过QQ、微信之类的聊天工具吧，A是B的好友，而B和C是好友，那么A和C的共同好友就是B。下面我们使用MapReduce的方式实现计算共同好友。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-03-24T04:57:41.255Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="【Hadoop16】：MapReduce案例-共同好友">
+<meta name="twitter:description" content="前言本章来学习一个相对复杂一些的案例：共同好友。想必大家都用过QQ、微信之类的聊天工具吧，A是B的好友，而B和C是好友，那么A和C的共同好友就是B。下面我们使用MapReduce的方式实现计算共同好友。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/24/MapReduce-Friends-Together/">
+
+
+
+
+
+  <title>【Hadoop16】：MapReduce案例-共同好友 | 小西瓜</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">小西瓜</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/24/MapReduce-Friends-Together/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="XiaoXiGua">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/girl.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="小西瓜">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">【Hadoop16】：MapReduce案例-共同好友</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-24T12:56:43+08:00">
+                2019-03-24
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/03/24/MapReduce-Friends-Together/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/24/MapReduce-Friends-Together/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2019/03/24/MapReduce-Friends-Together/" class="leancloud_visitors" data-flag-title="【Hadoop16】：MapReduce案例-共同好友">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本章来学习一个相对复杂一些的案例：共同好友。想必大家都用过QQ、微信之类的聊天工具吧，A是B的好友，而B和C是好友，那么A和C的共同好友就是B。下面我们使用MapReduce的方式实现计算共同好友。</p>
+<a id="more"></a>
+<h2 id="需求"><a href="#需求" class="headerlink" title="需求"></a>需求</h2><p>假设数据样本如下所示。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">A:B,C,D,F,E,O</span><br><span class="line">B:A,C,E,K</span><br><span class="line">C:F,A,D,I</span><br><span class="line">D:A,E,F,L</span><br><span class="line">E:B,C,D,M,L</span><br><span class="line">F:A,B,C,D,E,O,M</span><br><span class="line">G:A,C,D,E,F</span><br><span class="line">H:A,C,D,E,O</span><br><span class="line">I:A,O</span><br><span class="line">J:B,O</span><br><span class="line">K:A,C,D</span><br><span class="line">L:D,E,F</span><br><span class="line">M:E,F,G</span><br><span class="line">O:A,H,I,J</span><br></pre></td></tr></table></figure>
+<p>每一行数据代表一个用户的好友关系，冒号前面是用户，冒号后面是该用户的所有好友，数据是单向的。现在要求计算出哪些人有共同好友，以及他们的共同好友都有谁。</p>
+<p>举例来说，A和B的共同好友有：C、E。J和K没有共同好友。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>明白了需求后，我们就要考虑如何实现了。这个问题稍微有些复杂，需要先想明白，再去写代码。</p>
+<p>抛开MapReduce不说，我们先用普通代码的方法将这个案例实现出来。从第一行开始，依次去和后续所有行进行计算，用自己的好友列表与对方好友列表的交集即可。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">OurFriends</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> String[] relations = &#123;</span><br><span class="line">            <span class="string">"A:B,C,D,F,E,O"</span>,</span><br><span class="line">            <span class="string">"B:A,C,E,K"</span>,</span><br><span class="line">            <span class="string">"C:F,A,D,I"</span>,</span><br><span class="line">            <span class="string">"D:A,E,F,L"</span>,</span><br><span class="line">            <span class="string">"E:B,C,D,M,L"</span>,</span><br><span class="line">            <span class="string">"F:A,B,C,D,E,O,M"</span>,</span><br><span class="line">            <span class="string">"G:A,C,D,E,F"</span>,</span><br><span class="line">            <span class="string">"H:A,C,D,E,O"</span>,</span><br><span class="line">            <span class="string">"I:A,O"</span>,</span><br><span class="line">            <span class="string">"J:B,O"</span>,</span><br><span class="line">            <span class="string">"K:A,C,D"</span>,</span><br><span class="line">            <span class="string">"L:D,E,F"</span>,</span><br><span class="line">            <span class="string">"M:E,F,G"</span>,</span><br><span class="line">            <span class="string">"O:A,H,I,J"</span></span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; relations.length - <span class="number">1</span>; i++) &#123;</span><br><span class="line">            <span class="comment">// 解析出第一行数据</span></span><br><span class="line">            User current = parse(relations[i]);</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> j = i + <span class="number">1</span>; j &lt; relations.length; j++) &#123;</span><br><span class="line">                User other = parse(relations[j]);</span><br><span class="line">                <span class="comment">// 首先判断双方是否为好友关系</span></span><br><span class="line">                <span class="comment">// 获取双方的共同好友</span></span><br><span class="line">                Set&lt;String&gt; together = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">                <span class="keyword">for</span> (String myFriend : current.friends) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (other.friends.contains(myFriend)) &#123;</span><br><span class="line">                        together.add(myFriend);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (together.isEmpty()) &#123;</span><br><span class="line">                    <span class="comment">// System.out.println(String.format("%s与%s没有共同好友.", current.name, other.name));</span></span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    System.out.println(String.format(<span class="string">"%s与%s的共同好友是：%s"</span>, current.name, other.name, together));</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> User <span class="title">parse</span><span class="params">(String relation)</span> </span>&#123;</span><br><span class="line">        User user = <span class="keyword">new</span> User();</span><br><span class="line">        String[] parts = relation.split(<span class="string">":"</span>);</span><br><span class="line">        String name = parts[<span class="number">0</span>];</span><br><span class="line">        String[] friends = parts[<span class="number">1</span>].split(<span class="string">","</span>);</span><br><span class="line"></span><br><span class="line">        user.name = name;</span><br><span class="line">        user.friends = <span class="keyword">new</span> HashSet&lt;&gt;(Arrays.asList(friends));</span><br><span class="line">        <span class="keyword">return</span> user;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">User</span> </span>&#123;</span><br><span class="line">    String name;</span><br><span class="line">    Set&lt;String&gt; friends;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>输出结果如下所示。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line">A与B的共同好友是：[C, E]</span><br><span class="line">A与C的共同好友是：[D, F]</span><br><span class="line">A与D的共同好友是：[E, F]</span><br><span class="line">A与E的共同好友是：[B, C, D]</span><br><span class="line">A与F的共同好友是：[B, C, D, E, O]</span><br><span class="line">A与G的共同好友是：[C, D, E, F]</span><br><span class="line">A与H的共同好友是：[C, D, E, O]</span><br><span class="line">A与I的共同好友是：[O]</span><br><span class="line">A与J的共同好友是：[B, O]</span><br><span class="line">A与K的共同好友是：[C, D]</span><br><span class="line">A与L的共同好友是：[D, E, F]</span><br><span class="line">A与M的共同好友是：[E, F]</span><br><span class="line">B与C的共同好友是：[A]</span><br><span class="line">B与D的共同好友是：[A, E]</span><br><span class="line">B与E的共同好友是：[C]</span><br><span class="line">B与F的共同好友是：[A, C, E]</span><br><span class="line">B与G的共同好友是：[A, C, E]</span><br><span class="line">B与H的共同好友是：[A, C, E]</span><br><span class="line">B与I的共同好友是：[A]</span><br><span class="line">B与K的共同好友是：[A, C]</span><br><span class="line">B与L的共同好友是：[E]</span><br><span class="line">B与M的共同好友是：[E]</span><br><span class="line">B与O的共同好友是：[A]</span><br><span class="line">C与D的共同好友是：[A, F]</span><br><span class="line">C与E的共同好友是：[D]</span><br><span class="line">C与F的共同好友是：[A, D]</span><br><span class="line">C与G的共同好友是：[A, D, F]</span><br><span class="line">C与H的共同好友是：[A, D]</span><br><span class="line">C与I的共同好友是：[A]</span><br><span class="line">C与K的共同好友是：[A, D]</span><br><span class="line">C与L的共同好友是：[D, F]</span><br><span class="line">C与M的共同好友是：[F]</span><br><span class="line">C与O的共同好友是：[A, I]</span><br><span class="line">D与E的共同好友是：[L]</span><br><span class="line">D与F的共同好友是：[A, E]</span><br><span class="line">D与G的共同好友是：[A, E, F]</span><br><span class="line">D与H的共同好友是：[A, E]</span><br><span class="line">D与I的共同好友是：[A]</span><br><span class="line">D与K的共同好友是：[A]</span><br><span class="line">D与L的共同好友是：[E, F]</span><br><span class="line">D与M的共同好友是：[E, F]</span><br><span class="line">D与O的共同好友是：[A]</span><br><span class="line">E与F的共同好友是：[B, C, D, M]</span><br><span class="line">E与G的共同好友是：[C, D]</span><br><span class="line">E与H的共同好友是：[C, D]</span><br><span class="line">E与J的共同好友是：[B]</span><br><span class="line">E与K的共同好友是：[C, D]</span><br><span class="line">E与L的共同好友是：[D]</span><br><span class="line">F与G的共同好友是：[A, C, D, E]</span><br><span class="line">F与H的共同好友是：[A, C, D, E, O]</span><br><span class="line">F与I的共同好友是：[A, O]</span><br><span class="line">F与J的共同好友是：[B, O]</span><br><span class="line">F与K的共同好友是：[A, C, D]</span><br><span class="line">F与L的共同好友是：[D, E]</span><br><span class="line">F与M的共同好友是：[E]</span><br><span class="line">F与O的共同好友是：[A]</span><br><span class="line">G与H的共同好友是：[A, C, D, E]</span><br><span class="line">G与I的共同好友是：[A]</span><br><span class="line">G与K的共同好友是：[A, C, D]</span><br><span class="line">G与L的共同好友是：[D, E, F]</span><br><span class="line">G与M的共同好友是：[E, F]</span><br><span class="line">G与O的共同好友是：[A]</span><br><span class="line">H与I的共同好友是：[A, O]</span><br><span class="line">H与J的共同好友是：[O]</span><br><span class="line">H与K的共同好友是：[A, C, D]</span><br><span class="line">H与L的共同好友是：[D, E]</span><br><span class="line">H与M的共同好友是：[E]</span><br><span class="line">H与O的共同好友是：[A]</span><br><span class="line">I与J的共同好友是：[O]</span><br><span class="line">I与K的共同好友是：[A]</span><br><span class="line">I与O的共同好友是：[A]</span><br><span class="line">K与L的共同好友是：[D]</span><br><span class="line">K与O的共同好友是：[A]</span><br><span class="line">L与M的共同好友是：[E, F]</span><br></pre></td></tr></table></figure>
+<p>下面我们来考虑如何使用MapReduce来计算共同好友。</p>
+<p>计算共同好友，需要将问题转换为MapReduce的编程模型来进行实现。在上面使用Java语言实现时，逻辑是依次用每个用户的好友列表，和其他用户的好友列表进行交集计算。但是在MapReduce中可不行，因为数据是一行行的交给Map任务处理的，并且可能会有多个Map任务，因此无法在Map阶段就计算出来，肯定是需要依赖到Reduce任务的。那么在Map阶段该如何做呢？下面我们用两行数据进行说明。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">A:B,C,D,F,E,O</span><br><span class="line">B:A,C,E,K</span><br><span class="line"></span><br><span class="line"># 第一行输出</span><br><span class="line">&lt;B,A&gt;,&lt;C,A&gt;,&lt;D,A&gt;,&lt;F,A&gt;,&lt;E,A&gt;,&lt;O,A&gt;</span><br><span class="line"># 第二行输出</span><br><span class="line">&lt;A,B&gt;,&lt;C,B&gt;,&lt;E,B&gt;,&lt;K,B&gt;</span><br><span class="line"></span><br><span class="line"># Reduce端接收到</span><br><span class="line">&lt;C,A&gt;,&lt;C,B&gt;,...</span><br><span class="line">这样就计算出了，A用户和B用户都包含了C好友</span><br><span class="line">Reduce任务输出</span><br><span class="line">&lt;A-B,C&gt;</span><br></pre></td></tr></table></figure>
+<p>这是什么意思呢？</p>
+<p>Map任务每读取一行，会产生多条数据，数据格式为&lt;好友,用户&gt;，以好友作为Key，自己作为Value。那么在Reduce阶段，就会收到&lt;好友,[用户1,用户2,…]，这样我们就计算出了有哪些用户，他们的好友列表中都包括该好友。</p>
+<p>需要注意到，Reduce的输出为两个用户之间的某一个共同好友，因此需要编写两个MapReduce程序，第一个用于计算用户的共同好友，但Reduce的输出为每行一个共同好友。第二个MapReduce程序将第一次输出的结果作为输入，进行汇总。</p>
+<p>下面我们来编写代码实现。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FriendMapper</span> <span class="keyword">extends</span> <span class="title">Mapper</span>&lt;<span class="title">LongWritable</span>, <span class="title">Text</span>, <span class="title">Text</span>, <span class="title">Text</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outKey = <span class="keyword">new</span> Text();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outValue = <span class="keyword">new</span> Text();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">map</span><span class="params">(LongWritable key, Text value, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="comment">// A:B,C,D,F,E,O</span></span><br><span class="line">        String[] fields = value.toString().split(<span class="string">":"</span>);</span><br><span class="line">        String user = fields[<span class="number">0</span>];</span><br><span class="line">        String[] friends = fields[<span class="number">1</span>].split(<span class="string">","</span>);</span><br><span class="line">        <span class="keyword">for</span> (String friend : friends) &#123;</span><br><span class="line">            outKey.set(friend);</span><br><span class="line">            outValue.set(user);</span><br><span class="line">            <span class="comment">// &lt;B,A&gt;,&lt;C,A&gt;,&lt;D,A&gt;,&lt;F,A&gt;,&lt;E,A&gt;,&lt;O,A&gt;</span></span><br><span class="line">            context.write(outKey, outValue);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FriendReducer</span> <span class="keyword">extends</span> <span class="title">Reducer</span>&lt;<span class="title">Text</span>, <span class="title">Text</span>, <span class="title">Text</span>, <span class="title">Text</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outKey = <span class="keyword">new</span> Text();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outValue = <span class="keyword">new</span> Text();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">reduce</span><span class="params">(Text key, Iterable&lt;Text&gt; values, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="comment">// &lt;好友, [用户1, 用户2, ...]&gt;</span></span><br><span class="line">        List&lt;String&gt; users = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (Text value : values) &#123;</span><br><span class="line">            users.add(value.toString());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; users.size() - <span class="number">1</span>; i++) &#123;</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> j = i + <span class="number">1</span>; j &lt; users.size(); j++) &#123;</span><br><span class="line">                outKey.set(users.get(i) + <span class="string">"-"</span> + users.get(j));</span><br><span class="line">                outValue.set(key);</span><br><span class="line">                context.write(outKey, outValue);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FriendMapper2</span> <span class="keyword">extends</span> <span class="title">Mapper</span>&lt;<span class="title">LongWritable</span>, <span class="title">Text</span>, <span class="title">Text</span>, <span class="title">Text</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outKey = <span class="keyword">new</span> Text();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outValue = <span class="keyword">new</span> Text();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">map</span><span class="params">(LongWritable key, Text value, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        String[] fields = value.toString().split(<span class="string">"\t"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 这里需要将Key排序，避免出现A-B、B-A这样的情况</span></span><br><span class="line">        String[] users = fields[<span class="number">0</span>].split(<span class="string">"-"</span>);</span><br><span class="line">        Arrays.sort(users);</span><br><span class="line"></span><br><span class="line">        outKey.set(users[<span class="number">0</span>] + <span class="string">"-"</span> + users[<span class="number">1</span>]);</span><br><span class="line">        outValue.set(fields[<span class="number">1</span>]);</span><br><span class="line"></span><br><span class="line">        context.write(outKey, outValue);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FriendReducer2</span> <span class="keyword">extends</span> <span class="title">Reducer</span>&lt;<span class="title">Text</span>, <span class="title">Text</span>, <span class="title">Text</span>, <span class="title">NullWritable</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outKey = <span class="keyword">new</span> Text();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> NullWritable outValue = NullWritable.get();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">reduce</span><span class="params">(Text key, Iterable&lt;Text&gt; values, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="comment">// values就是两个用户的共同好友</span></span><br><span class="line">        Set&lt;String&gt; friends = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (Text value : values) &#123;</span><br><span class="line">            friends.add(value.toString());</span><br><span class="line">        &#125;</span><br><span class="line">        outKey.set(key.toString() + <span class="string">":"</span> + friends.toString());</span><br><span class="line">        context.write(outKey, outValue);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终输出结果如下。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line">A-B:[C, E]</span><br><span class="line">A-C:[D, F]</span><br><span class="line">A-D:[E, F]</span><br><span class="line">A-E:[B, C, D]</span><br><span class="line">A-F:[B, C, D, E, O]</span><br><span class="line">A-G:[C, D, E, F]</span><br><span class="line">A-H:[C, D, E, O]</span><br><span class="line">A-I:[O]</span><br><span class="line">A-J:[B, O]</span><br><span class="line">A-K:[C, D]</span><br><span class="line">A-L:[D, E, F]</span><br><span class="line">A-M:[E, F]</span><br><span class="line">B-C:[A]</span><br><span class="line">B-D:[A, E]</span><br><span class="line">B-E:[C]</span><br><span class="line">B-F:[A, C, E]</span><br><span class="line">B-G:[A, C, E]</span><br><span class="line">B-H:[A, C, E]</span><br><span class="line">B-I:[A]</span><br><span class="line">B-K:[A, C]</span><br><span class="line">B-L:[E]</span><br><span class="line">B-M:[E]</span><br><span class="line">B-O:[A]</span><br><span class="line">C-D:[A, F]</span><br><span class="line">C-E:[D]</span><br><span class="line">C-F:[A, D]</span><br><span class="line">C-G:[A, D, F]</span><br><span class="line">C-H:[A, D]</span><br><span class="line">C-I:[A]</span><br><span class="line">C-K:[A, D]</span><br><span class="line">C-L:[D, F]</span><br><span class="line">C-M:[F]</span><br><span class="line">C-O:[A, I]</span><br><span class="line">D-E:[L]</span><br><span class="line">D-F:[A, E]</span><br><span class="line">D-G:[A, E, F]</span><br><span class="line">D-H:[A, E]</span><br><span class="line">D-I:[A]</span><br><span class="line">D-K:[A]</span><br><span class="line">D-L:[E, F]</span><br><span class="line">D-M:[E, F]</span><br><span class="line">D-O:[A]</span><br><span class="line">E-F:[B, C, D, M]</span><br><span class="line">E-G:[C, D]</span><br><span class="line">E-H:[C, D]</span><br><span class="line">E-J:[B]</span><br><span class="line">E-K:[C, D]</span><br><span class="line">E-L:[D]</span><br><span class="line">F-G:[A, C, D, E]</span><br><span class="line">F-H:[A, C, D, E, O]</span><br><span class="line">F-I:[A, O]</span><br><span class="line">F-J:[B, O]</span><br><span class="line">F-K:[A, C, D]</span><br><span class="line">F-L:[D, E]</span><br><span class="line">F-M:[E]</span><br><span class="line">F-O:[A]</span><br><span class="line">G-H:[A, C, D, E]</span><br><span class="line">G-I:[A]</span><br><span class="line">G-K:[A, C, D]</span><br><span class="line">G-L:[D, E, F]</span><br><span class="line">G-M:[E, F]</span><br><span class="line">G-O:[A]</span><br><span class="line">H-I:[A, O]</span><br><span class="line">H-J:[O]</span><br><span class="line">H-K:[A, C, D]</span><br><span class="line">H-L:[D, E]</span><br><span class="line">H-M:[E]</span><br><span class="line">H-O:[A]</span><br><span class="line">I-J:[O]</span><br><span class="line">I-K:[A]</span><br><span class="line">I-O:[A]</span><br><span class="line">K-L:[D]</span><br><span class="line">K-O:[A]</span><br><span class="line">L-M:[E, F]</span><br></pre></td></tr></table></figure>
+<p>可以看到，最终结果与我们编写的单机版Java程序效果一致。</p>
+<h2 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a>扩展</h2><p>基于上面的数据，我们可以做一个扩展任务：计算互为好友的用户。举例来说，A和B互为好友，因为A的好友列表中有B，而B的好友列表中有A。A和K不是互为好友，因为A的好友列表中没有K，而K的好友列表中有A。L和M不是互为好友，因为L的好友列表中没有M，M的好友列表中也没有L。</p>
+<p>我们还是以两行数据来作为说明。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">A:B,C,D,F,E,O</span><br><span class="line">B:A,C,E,K</span><br><span class="line"></span><br><span class="line"># 第一行输出</span><br><span class="line">&lt;A-B,null&gt;,&lt;A-C,null&gt;,&lt;A-D,null&gt;,...</span><br><span class="line"># 第二行输出</span><br><span class="line">&lt;A-B,null&gt;,&lt;B-C,null&gt;,&lt;B-E,null&gt;,...</span><br><span class="line"></span><br><span class="line">Reduce任务只要判断values的长度是否为2，就可以知道哪两个用户为共同好友了</span><br><span class="line">&lt;A-B,[null,null]&gt;,&lt;A-E,[null]&gt;</span><br></pre></td></tr></table></figure>
+<p>下面我们直接看Map任务和Reduce任务的代码即可。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FriendMapper3</span> <span class="keyword">extends</span> <span class="title">Mapper</span>&lt;<span class="title">LongWritable</span>, <span class="title">Text</span>, <span class="title">Text</span>, <span class="title">NullWritable</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Text outKey = <span class="keyword">new</span> Text();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> NullWritable outValue = NullWritable.get();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">map</span><span class="params">(LongWritable key, Text value, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="comment">// A:B,C,D,F,E,O</span></span><br><span class="line">        String[] fields = value.toString().split(<span class="string">":"</span>);</span><br><span class="line">        <span class="comment">// A</span></span><br><span class="line">        String user = fields[<span class="number">0</span>];</span><br><span class="line">        <span class="comment">// B,C,D,F,E,O</span></span><br><span class="line">        String[] friends = fields[<span class="number">1</span>].split(<span class="string">","</span>);</span><br><span class="line">        <span class="keyword">for</span> (String friend : friends) &#123;</span><br><span class="line">            String[] k = &#123;user, friend&#125;;</span><br><span class="line">            Arrays.sort(k);</span><br><span class="line">            outKey.set(k[<span class="number">0</span>] + <span class="string">"-"</span> + k[<span class="number">1</span>]);</span><br><span class="line">            <span class="comment">// &lt;A-B, null&gt;, &lt;A-C, null&gt;, &lt;A-D, null&gt;, ...</span></span><br><span class="line">            context.write(outKey, outValue);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FriendReducer3</span> <span class="keyword">extends</span> <span class="title">Reducer</span>&lt;<span class="title">Text</span>, <span class="title">NullWritable</span>, <span class="title">Text</span>, <span class="title">NullWritable</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">reduce</span><span class="params">(Text key, Iterable&lt;NullWritable&gt; values, Context context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> counter = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (NullWritable value : values) &#123;</span><br><span class="line">            counter++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (counter == <span class="number">2</span>) &#123;</span><br><span class="line">            <span class="comment">// 互为好友</span></span><br><span class="line">            context.write(key, NullWritable.get());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终输出结果如下。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">A-B</span><br><span class="line">A-C</span><br><span class="line">A-D</span><br><span class="line">A-F</span><br><span class="line">A-O</span><br><span class="line">B-E</span><br><span class="line">C-F</span><br><span class="line">D-E</span><br><span class="line">D-F</span><br><span class="line">D-L</span><br><span class="line">E-L</span><br><span class="line">E-M</span><br><span class="line">F-M</span><br><span class="line">H-O</span><br><span class="line">I-O</span><br><span class="line">J-O</span><br></pre></td></tr></table></figure>
+<h2 id="Job串联"><a href="#Job串联" class="headerlink" title="Job串联"></a>Job串联</h2><p>在第一个案例中，使用到了两个MapReduce任务，我们先提交第一个任务，等待运行完成后，再提交第二个，而第二个任务的输入，则是第一个任务的输出。</p>
+<p>在一些相对复杂的处理逻辑中，往往需要多个MapReduce任务串联起来进行处理。一次一个任务提交非常麻烦，你需要等待第一个任务运行结束，再去手动提交第二个。MapReduce中提供了<code>JobControl</code>用于将多个任务串联起来，而不需要手动一个个的去提交。</p>
+<p>代码很简单，下面给出代码片段，说明如何去使用。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 将job转换为ControlledJob</span></span><br><span class="line">ControlledJob cjob1 = <span class="keyword">new</span> ControlledJob(job1.getConfiguration());</span><br><span class="line">ControlledJob cjob2 = <span class="keyword">new</span> ControlledJob(job2.getConfiguration());</span><br><span class="line"><span class="comment">// 设置作业之间的依赖关系</span></span><br><span class="line">cjob2.addDependingJob(cjob1);</span><br><span class="line"><span class="comment">// 创建JobControl对象，实际上是一个Runnable</span></span><br><span class="line">JobControl jobControl = <span class="keyword">new</span> JobControl(<span class="string">"MyJobGroup"</span>);</span><br><span class="line"><span class="comment">// 将ControlledJob放到JobControl中</span></span><br><span class="line">jobControl.addJob(cjob1);</span><br><span class="line">jobControl.addJob(cjob2);</span><br><span class="line"><span class="comment">// 启动一个线程执行jobControl</span></span><br><span class="line">Thread t = <span class="keyword">new</span> Thread(jobControl);</span><br><span class="line">t.start();</span><br><span class="line"><span class="comment">// 等待任务结束</span></span><br><span class="line"><span class="keyword">while</span> (!jobControl.allFinished()) &#123;</span><br><span class="line">    Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章完成了”共同好友”以及”互为好友”的MapReduce案例。这两个案例相对于前面的案例有些复杂，主要关键点在于Key的设计。由于MapReduce编程模型的特性（按照Key排序、汇总等），需要将任务按照其特性进行拆解，这点非常重要。最后我们介绍了在多个MapReduce串联情况下，可以使用JobControl来完成任务串联执行，而无需手动依次提交任务。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>如果您觉得不错，请赞赏一下!</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="XiaoXiGua 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="XiaoXiGua 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/18/MapReduce-Join/" rel="next" title="【Hadoop15】：MapReduce案例-数据连接">
+                <i class="fa fa-chevron-left"></i> 【Hadoop15】：MapReduce案例-数据连接
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": false,
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "douban", "sqq", "qzone", "weixin", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/girl.png" alt="XiaoXiGua">
+            
+              <p class="site-author-name" itemprop="name">XiaoXiGua</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#需求"><span class="nav-number">2.</span> <span class="nav-text">需求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现"><span class="nav-number">3.</span> <span class="nav-text">实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#扩展"><span class="nav-number">4.</span> <span class="nav-text">扩展</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Job串联"><span class="nav-number">5.</span> <span class="nav-text">Job串联</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">6.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">XiaoXiGua</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz',
+        appKey: 'wqOgPg0cXQillOPzrXScXSHa',
+        placeholder: '欢迎评论',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz", "wqOgPg0cXQillOPzrXScXSHa");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
