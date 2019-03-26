@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hexo, NexT">
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言前几章学习了YARN的基本概念与调度器，本章我们来学习MapReduce任务在提交时的流程，在提交时如何与YARN进行交互，并且讨论在任务运行过程中，各个组件如何进行故障恢复。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【Hadoop20】：MapReduce任务提交到YARN">
+<meta property="og:url" content="http://yoursite.com/2019/03/26/MapReduce-Submit-Job-to-YARN/index.html">
+<meta property="og:site_name" content="小西瓜">
+<meta property="og:description" content="前言前几章学习了YARN的基本概念与调度器，本章我们来学习MapReduce任务在提交时的流程，在提交时如何与YARN进行交互，并且讨论在任务运行过程中，各个组件如何进行故障恢复。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://i.imgur.com/KXhoV6O.png">
+<meta property="og:updated_time" content="2019-03-26T14:51:47.192Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="【Hadoop20】：MapReduce任务提交到YARN">
+<meta name="twitter:description" content="前言前几章学习了YARN的基本概念与调度器，本章我们来学习MapReduce任务在提交时的流程，在提交时如何与YARN进行交互，并且讨论在任务运行过程中，各个组件如何进行故障恢复。">
+<meta name="twitter:image" content="https://i.imgur.com/KXhoV6O.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/26/MapReduce-Submit-Job-to-YARN/">
+
+
+
+
+
+  <title>【Hadoop20】：MapReduce任务提交到YARN | 小西瓜</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">小西瓜</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/26/MapReduce-Submit-Job-to-YARN/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="XiaoXiGua">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/girl.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="小西瓜">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">【Hadoop20】：MapReduce任务提交到YARN</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-26T22:50:25+08:00">
+                2019-03-26
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/03/26/MapReduce-Submit-Job-to-YARN/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/26/MapReduce-Submit-Job-to-YARN/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2019/03/26/MapReduce-Submit-Job-to-YARN/" class="leancloud_visitors" data-flag-title="【Hadoop20】：MapReduce任务提交到YARN">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>前几章学习了YARN的基本概念与调度器，本章我们来学习MapReduce任务在提交时的流程，在提交时如何与YARN进行交互，并且讨论在任务运行过程中，各个组件如何进行故障恢复。</p>
+<a id="more"></a>
+<h2 id="MapReduce作业运行机制"><a href="#MapReduce作业运行机制" class="headerlink" title="MapReduce作业运行机制"></a>MapReduce作业运行机制</h2><p>在之前的案例中，我们通过<code>Job</code>对象的<code>waitForCompletion()</code>方法（实际上内部调用了<code>submit()</code>方法）来提交作业，并等待任务运行完成。对于客户端而言，只是一个方法的调用，但是其内部封装了大量的处理细节。</p>
+<p>任务提交时，涉及到以下几个部分。</p>
+<ul>
+<li>客户端，提交MapReduce作业</li>
+<li>ResourceManager，负责协调集群上计算机资源的分配</li>
+<li>NodeManager，负责启动和监视集群中机器上的计算容器（Container）</li>
+<li>MapReduce的Application Master，负责协调运行MapReduce作业的任务。它和MapReduce任务在容器中运行，这些容器由ResourceManager分配并由NodeManager进行管理</li>
+<li>分布式文件系统，一般为HDFS，用来与其他实体间共享作业文件</li>
+</ul>
+<h3 id="作业的提交"><a href="#作业的提交" class="headerlink" title="作业的提交"></a>作业的提交</h3><p>Job的<code>submit()</code>方法创建一个内部的<code>JobSubmitter</code>实例，并且调用其<code>submitJobInternal()</code>方法。提交作业后，<code>waitForCompletion()</code>每秒轮询作业的进度，如果发现自上次报告后有改变，便把进度报告到控制台。作业完成后，如果成功，就显示作业计数器；如果失败，则导致作业失败的错误被记录到控制台。</p>
+<p>下图是MapReduce作业提交的流程。</p>
+<p><img src="https://i.imgur.com/KXhoV6O.png" alt></p>
+<p>JobSubmitter所实现的作业提交过程如下所述。</p>
+<ul>
+<li>向ResourceManager请求一个新的应用ID，用于MapReduce作业ID</li>
+<li>检查作业的输出说明。例如，如果没有指定输出目录或输出目录已经存在，作业就不提交，错误抛回给MapReduce程序</li>
+<li>计算作业的输入分片，如果分片无法计算，比如因为输入路径不存在，作业就不提交，错误返回给MapReduce程序</li>
+<li>将运行作业所需要的资源（包括作业Jar包、配置文件和计算所得的输入分片）复制到一个以作业ID命名的目录下的共享文件系统中。作业Jar的副本数比较多（由<code>mapreduce.client.submit.file.replication</code>属性控制，默认值为10），因此在运行作业的任务时，集群中有很多个副本可供NodeManager访问</li>
+<li>通过调用ResourceManager的<code>submitApplication()</code>方法提交作业</li>
+</ul>
+<h3 id="作业的初始化"><a href="#作业的初始化" class="headerlink" title="作业的初始化"></a>作业的初始化</h3><p>ResourceManager收到调用它的<code>submitApplication()</code>消息后，便将请求传递给YARN调度器。调度器分配一个容器，由NodeManager启动容器运行Application Master进程。</p>
+<p>MapReduce作业的Application Master是一个Java应用程序，它的主类是<code>MRAppMaster</code>。由于将接受来自任务的进度和完成报告，因此Application Master对作业的初始化是通过创建多个汇总对象以保持对作业进度的跟踪来完成的。接下来，它接受来自共享文件系统的、在客户端计算的输入分片。然后对每一个分片创建一个<code>map</code>任务对象以及由<code>mapreduce.job.reduces</code>属性（通过Job的setNumReduceTasks()方法设置）确定的多个<code>reduce</code>任务对象。任务ID在此时分片。</p>
+<p>Application Master必须决定如何运行构成MapReduce作业的各个任务。如果作业很小，就选择和自己在同一个JVM上运行任务。与在一个节点上顺序运行这些任务相比，当Application Master判断在新的容器中分配和运行任务的开销大于并行运行它们的开销时，就会发生这一情况。这一的作业成为<code>uberized</code>，或者叫做<code>uber</code>任务。</p>
+<p>怎么判断作业是小作业呢？默认情况下，小作业就是少于10个map任务且只有1个reduce任务，此外输入大小小于一个HDFS块的作业（通过设置<code>mapreduce.job.ubertask.maxmaps</code>、<code>mapreduce.job.ubertask.maxreduces</code>和<code>mapreduce.job.ubertask.maxbytes</code>可以改变这几个值）。必须明确启用Uber任务（对于单个作业，或者是对整个集群），具体方法是将<code>mapreduce.job.ubertask.enable</code>属性设置为true。</p>
+<p>最后，在任何任务运行之前，Application Master调用<code>setupJob()</code>方法设置<code>OutputCommitter</code>。<code>FileOutputCommitter</code>为默认值，表示将建立作业的最终输出目录及任务输出的临时工作空间。</p>
+<h3 id="任务的分配"><a href="#任务的分配" class="headerlink" title="任务的分配"></a>任务的分配</h3><p>如果作业不适合作为uber任务运行，那么Application Master就会为该作业中的所有map任务和reduce任务向ResourceManager请求容器。首先为map任务发出请求，该请求优先级要高于reduce任务的请求，这是因为所有的map任务必须在reduce的排序阶段能够启动前完成。直到有5%的map任务已经完成时，为reduce任务的请求才会发出。</p>
+<p>Reduce任务能够在集群中任意位置运行，但map任务的请求有着数据本地化局限，这也是调度器所关注的。在理想的情况下，任务是数据本地化的，意味着任务在分片所在的同一节点上运行。可选的情况是，任务可能是本地机架化的，即和分片在同一机架而非同一节点上运行。有一些任务既不是数据本地化，也不是机架本地化，它们会从别的机架，而不是运行所在的机架上获取自己的数据。对于一个特定的作业运行，可以通过查看作业的计数器来确定在每个本地化层次上运行的任务的数量。</p>
+<p>请求也为任务制定了内存需求和CPU数。在默认情况下，每个map任务和reduce任务都分配到1024MB内存和1个虚拟核，这些值可以在每个作业的基础上进行配置，分别通过4个属性来设置<code>mapreduce.map.memory.mb</code>、<code>mapreduce.reduce.memory.mb</code>、<code>mapreduce.map.cpu.vcores</code>和<code>mapreduce.cpu.vcores</code>。</p>
+<h3 id="任务的执行"><a href="#任务的执行" class="headerlink" title="任务的执行"></a>任务的执行</h3><p>一旦ResourceManager的调度器为任务分配了一个特定节点上的容器，application master就通过与NodeManager通信来启动任务容器。该任务由主类为<code>YarnChild</code>的一个Java应用程序执行。在它运行任务之前，首先将任务需要的资源本地化，包括作业的配置、Jar文件和所有来自分布式缓存的文件。最后，运行map任务或reduce任务。</p>
+<p>YarnChild在指定的JVM中运行，因此用户定义的map或reduce方法（甚至是YarnChild）中的任何缺陷不会影响到NodeManager，例如导致其崩溃或挂起。</p>
+<p>每个任务都能够执行<code>setup</code>和<code>commit</code>动作，它们和任务本身在同一个JVM中运行，并由作业的<code>OutputCommitter</code>确定。对于基于文件系统的作业，提交动作将任务输出由临时位置搬移到最终位置。提交协议确保当前<code>推测执行</code>被启用时，只有一个任务副本被提交，其他的都被取消。</p>
+<h3 id="进度和状态更新"><a href="#进度和状态更新" class="headerlink" title="进度和状态更新"></a>进度和状态更新</h3><p>MapReduce是长时间运行的批量作业，运行时间范围从数秒到数小时。这可能是一个很长的时间段，所以对于用户而言，能够得知关于作业进展的一些反馈是很重要的。一个作业和它的每个任务都有一个状态（status），包括：作业或任务的状态（比如，运行中，成功完成，失败）、map和reduce的进度、作业计数器的值、状态消息或描述（可以由用户代码来设置）。这些状态信息在作业期间不断改变，它们是如何与客户端通信的呢？</p>
+<p>任务在运行时，对其进度保持追踪。对map任务，任务进度是已处理输入所占的比例。对reduce任务，情况稍微有点复杂，但系统仍然会估计已处理reduce输入的比例。整个过程分成三部分，与shuffle的三个阶段相对应。比如，如果任务已经执行reduce一半的输入，那么任务的进度便是5/6，这时因为已经完成复制和排序阶段（每个占1/3），并且已经完成reduce阶段的一半（1/6）。</p>
+<p>任务也有一组计数器，负责对任务运行过程中各个事件进行计数，这些计数器要么内置于框架中，例如已写入的map输出记录数，要么由用户自己定义。</p>
+<p>当map任务或reduce任务运行时，子进程和自己的父Application Master通过特定接口通信。每隔3秒钟，任务通过这个接口向自己的Application Master报告进度和状态（包括计数器），Application Master会形成一个作业的汇聚视图。</p>
+<p>ResourceManager的界面显示了所有运行中的应用程序，并且分别有链接指向这些应用各自的Application Master的界面，这些界面展示了MapReduce作业的更多细节，包括其进度。</p>
+<p>在作业期间，客户端每秒钟轮询一次Application Master以接收最新状态。客户端也可以使用Job的<code>getStatus()</code>方法得到一个JobStatus的实例，后者包含作业的所有状态信息。</p>
+<h3 id="作业的完成"><a href="#作业的完成" class="headerlink" title="作业的完成"></a>作业的完成</h3><p>当Application Master收到作业的左右一个任务已完成的通知后，便把作业的状态设置为”成功”。然后，在Job轮询状态时，便知道任务已成功完成，于是Job打印一条消息告知用户，然后从<code>waitForCompletion()</code>方法返回。Job的统计信息和计数值也在这个时候输出到控制台。</p>
+<p>如果Application Master有相应的设置，也会发送一个HTTP作业通知。希望收到回调指令的客户端可以通过<code>mapreduce.job.end-notification.url</code>属性来进行这项设置。</p>
+<p>最后，作业完成时，Application Master和任务容器清理其工作状态（这样中间输出将被删除），OutputCommitter的<code>commitJob()</code>方法会被调用。作业信息由作业历史服务器存档，以便日后用户需要时可以查询。</p>
+<h2 id="失败"><a href="#失败" class="headerlink" title="失败"></a>失败</h2><p>在现实情况中，用户代码错误不断，进程崩溃，机器故障，如此种种。使用Hadoop最主要的好处之一是它能处理此类故障并让你能够成功完成作业。我们需要考虑以下实体的失败：任务、Application Master、NodeManager和Resource Manager。</p>
+<h3 id="任务运行失败"><a href="#任务运行失败" class="headerlink" title="任务运行失败"></a>任务运行失败</h3><p>首先考虑任务失败的情况。最常见的情况是map任务或reduce任务中的用户代码抛出运行异常。如果发生这种情况，任务JVM会在退出之前向其父Application Master发送错误报告。错误报告最后被记入用户日志。Application Master将此次任务尝试标记为<code>failed</code>，并释放容器以便资源可以为其他任务使用。</p>
+<p>另一种失败模式是任务JVM突然退出，可能由于JVM软件缺陷而导致MapReduce用户代码由于某些特殊原因造成JVM退出。在这种情况下，NodeManager会注意到进程已经退出，并通知Application Master将此次任务尝试标记为失败。</p>
+<p>任务挂起的处理方式则有不同。一旦Application Master注意到已经有一段时间没有收到进程的更新，变回将任务标记为失败。在此之后，任务JVM进程将被自动杀死。任务被任务失败的超时间隔通常为10分钟，可以以作业为基础（或以集群为基础）进行设置，对应的属性为<code>mapreduce.task.timeout</code>，单位为毫秒。</p>
+<p>超时设置为0将关闭超时判定，所以长时间运行的任务永远不会被标记为失败。在这种情况下，被挂起的任务永远不会释放它的容器并随着时间的推移最终降低整个集群的效率。因此，尽量避免这种设置，同时充分确保每个任务能够定期汇报其进度。</p>
+<p>Application Master被告知一个任务尝试失败后，将重新调度该任务的执行。Application Master会试图避免在以前失败过的NodeManager上重新调度该任务。此外，如果一个任务失败过4次，将不会再充实。这个值时可以设置的：对于map任务，运行任务的最多尝试次数由<code>mapreduce.map.maxattemptes</code>属性控制；对于reduce任务，则由<code>mapreduce.reduce.maxattempts</code>属性控制。在默认情况下，如果任何任务失败次数大于4，整个作业都会失败。</p>
+<p>对于一些应用程序，我们不希望一旦有少数几个任务失败就中止整个作业，因为即使有任务失败，作业的一些结果可能还是可用的。在这种情况下，可用为作业设置在不触发作业失败的情况下允许任务失败的最大宝粉币。针对map任务和reduce任务的设置可以通过<code>mapreduce.map.failures.maxpercent</code>和<code>mapreduce.reduce.failures,maxpercent</code>这两个属性来完成。</p>
+<p>任务尝试也是可以中止的，这与失败不同。任务尝试可以被中止是因为它是一个推测任务或因为它所处的NodeManager失败，导致Application Master将它上面运行的所有任务尝试标记为<code>killed</code>。被中止的任务尝试不会被计入任务运行尝试次数，因为尝试被中止并不是任务的过错。</p>
+<p>用户也可以使用Web UI或命令行来手动中止或取消任务尝试。</p>
+<h3 id="Application-Master运行失败"><a href="#Application-Master运行失败" class="headerlink" title="Application Master运行失败"></a>Application Master运行失败</h3><p>YARN中的应用程序在运行失败的时候会有几次尝试机会，就像MapReduce任务在遇到硬件或网络故障时要进行几次尝试一样。运行MapReduce Application Master的最多尝试次数由<code>mapreduce.am.max-attempts</code>属性控制，默认值是2，即如果Application Master失败两次，便不会再进行尝试，作业将失败。</p>
+<p>YARN对集群上运行的Application Master的最大尝试次数加以了限制，单个的应用程序不可以超过这个限制。该限制由<code>yarn.resourcemanager.am.max-attempts</code>属性设置，默认值是2，这样如果你想增加Application Master的尝试次数，必须增加集群上YARN的设置。</p>
+<p>恢复的过程如下。Application Master向ResourceManager发送周期性的心跳，当Application Master失败时，ResourceManager将检测到该失败并在一个新的容器中开始一个新的Master实例。对于MapReduce Application Master，它默认情况下恢复功能是开启的，但可以通过设置<code>yarn.app.mapreduce.am.job.recovery.enable</code>为false来关闭这个功能。</p>
+<p>MapReduce客户端向Application Master轮询进度报告，但是如果它的Application Master运行失败，客户端就需要重新定位新的实例。在作业初始化期间，客户端向ResourceManager询问并缓存Application Master的地址，使其每次需要向Application Master查询时不必访问ResourceManager。但是，如果Application Master运行失败，客户端就会在发出状态更新请求时经历超时，这时客户端会再次向ResourceManager请求新的Application Master地址，这个过程对用户是透明的。</p>
+<h3 id="NodeManager运行失败"><a href="#NodeManager运行失败" class="headerlink" title="NodeManager运行失败"></a>NodeManager运行失败</h3><p>如果NodeManager由于崩溃或运行非常缓慢而失败，就会停止向ResourceManager发送心跳（或发送频率很低）。如果10分钟内（<code>yarn.resourcemanager.nm.liveness-monitor.expiry-interval-ms</code>配置）没有收到一条心跳信息，ResourceManager将会通知停止发送心跳信息的NodeManager，并将其从自己的节点池中移除以调度启用容器。</p>
+<p>在失败的NodeManager上运行的所有任务或Application Master都用前面两节描述的机制进行恢复。另外，对于那些曾经在失败的NodeManager上运行且成功完成的map任务，如果属于未完成的作业，那么Application Master会安排他们重新运行。这是由于这些任务的中间输出驻留在失败的节点NodeManager的本地文件系统中，可能无法被reduce任务访问的缘故。</p>
+<p>如果应用程序的运行失败次数过高，那么NodeManager可能会被拉黑，即使NodeManager自己并没有失败过。由Application Master管理黑名单，对于MapReduce，如果一个NodeManager上有超过三个任务失败，Application Master就会尽量将任务调度到不同的节点上。用户可以通过作业属性<code>mapreduce.job.maxtaskfailures.per.tracker</code>设置该阈值。</p>
+<h3 id="ResourceManager运行失败"><a href="#ResourceManager运行失败" class="headerlink" title="ResourceManager运行失败"></a>ResourceManager运行失败</h3><p>ResourceManager运行失败是非常严重的问题，没有ResourceManager，作业和任务容器将无法启动。在默认的配置中，Resource有单点故障问题，不管YARN也有HA机制，如果主ResourceManager失败了，那么备份的ResourceManager能够接替，且客户端不会感到明显的中断。</p>
+<p>关于所有运行中的应用程序的信息存储在一个高可用的状态存储区中（由ZooKeeper或HDFS备份），这样备机可以恢复出失败的主ResourceManager的关键状态。NodeManager信息没有存储在状态存储区中，因为当NodeManager发送它们的第一个心跳信息时，NodeManager的信息能以相当快的速度被新的ResourceManager重构。</p>
+<p>当新的ResourceManager启动后，它从状态存储区中读取应用程序的信息，然后为集群中运行的所有应用程序重启Application Master。这个行为不被计为失败的应用程序尝试，这时因为应用程序并不是因为程序代码错误而失败，而是被系统强行中止的。实际情况中，Application Master重启不是MapReduce应用程序的问题，因为它们是恢复已完成任务的工作。</p>
+<p>ResourceManager从备机到主机的切换是由故障转移控制器（failover controller）处理的。默认的故障转移控制器是自动工作的，使用ZooKeeper的leader选举机制以确保同一时刻只有一个主ResourceManager。不同于HDFS高可用的实现，故障转移器不必是一个独立的进程，为配置方便，默认情况下嵌入在ResourceManager中。故障转移也可以配置为手动处理，但不建议这样。</p>
+<p>为应对ResourceManager的故障转移，必须对客户端和NodeManager进行配置，因为他们可能是在和两个ResourceManager打交道。客户端和NodeManager以轮询方式试图连接每一个ResourceManager，直到找到主ResourceManager。如果主ResourceManager故障，他们将再次尝试直到备份ResourceManager变成主机。</p>
+<h2 id="任务的执行-1"><a href="#任务的执行-1" class="headerlink" title="任务的执行"></a>任务的执行</h2><p>在了解了MapReduce作业运行机制后，我们来看看MapReduce用户对任务执行的更多控制。</p>
+<h3 id="任务执行环境"><a href="#任务执行环境" class="headerlink" title="任务执行环境"></a>任务执行环境</h3><p>Hadoop为map任务或reduce任务提供运行环境相关信息。例如，map任务可以知道它处理的文件的名称，map任务或reduce任务可以得知任务的尝试次数。下表的属性可以从作业的配置信息中获取。</p>
+<table>
+<thead>
+<tr>
+<th>属性名称</th>
+<th>类型</th>
+<th>说明</th>
+<th>范例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mapreduce.job.id</td>
+<td>String</td>
+<td>作业ID</td>
+<td>job_201903061120_0004</td>
+</tr>
+<tr>
+<td>mapreduce.task.id</td>
+<td>String</td>
+<td>任务ID</td>
+<td>task_201903061120_m_000003</td>
+</tr>
+<tr>
+<td>mapreduce.task.attempt.id</td>
+<td>String</td>
+<td>任务尝试ID</td>
+<td>attempt_201903061120_m_000003_0</td>
+</tr>
+<tr>
+<td>mapreduce.task.partition</td>
+<td>int</td>
+<td>作业中任务的索引</td>
+<td>3</td>
+</tr>
+<tr>
+<td>mapreduce.task.ismap</td>
+<td>boolean</td>
+<td>此任务是否是map任务</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<h3 id="推测执行"><a href="#推测执行" class="headerlink" title="推测执行"></a>推测执行</h3><p>MapReduce模型将作业分解成任务，然后并行地运行任务以使作业的整体执行时间少于各个任务顺序执行的时间。这使作业执行时间对运行缓慢的任务很敏感，因为只运行一个缓慢的任务会使整个作业所用的时间远远长于执行其他任务的时间。当一个作业由几百个或几千个任务组成时，可能出现少数”拖后腿”的任务，这是很常见的。</p>
+<p>任务执行缓慢可能有多种原因，包括硬件老化或软件配置错误，但是，检测具体原因很困难，因为任务总能够成功完成，尽管比预期执行时间长。Hadoop不会尝试诊断或修复执行慢的任务，相反，在一个任务运行比预期慢的时候，它会尽量检测，并启动另一个相同的任务作为备份。这就是所谓的任务”推测执行”（Speculative Execution）。</p>
+<p>必须认识到一点：如果同时启动两个重复的任务，它们会互相竞争，导致推测执行无法工作。这对集群资源是一种浪费。相反，调度器跟踪作业中所有相同类型任务的进度，并且仅仅启动运行速度明显低于平均水平的那一小部分任务的推测副本。一个任务成功完成后，任何正在运行的重复任务都将被中止，因为已经不再需要它们了。因此，如果原任务在推测任务前完成，推测任务就会被中止；同样，如果推测任务先完成，那么原任务就会被中止。</p>
+<p>推测执行是一种优化措施，它并不能使作业的运行更可靠。如果有一些软件缺陷会造成任务挂起或运行速度减慢，依靠推测执行来避免这些问题显然是不明智的，并且不能可靠地运行，因为相同的软件缺陷可能会影响推测式任务。应该修复软件缺陷，使任务不会挂起或运行速度减慢。</p>
+<p>在默认情况下，推测执行是启用的。可以基于集群或基于每个作业，单独为map任务和reduce任务启用或禁用该功能。下表示推测任务相关的属性。</p>
+<table>
+<thead>
+<tr>
+<th>属性名称</th>
+<th>类型</th>
+<th>默认值</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mapreduce.map.speculative</td>
+<td>boolean</td>
+<td>true</td>
+<td>如果任务运行变慢，该属性决定着是否要启动map任务的另外一个实例</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.speculative</td>
+<td>boolean</td>
+<td>true</td>
+<td>如果任务运行变慢，该属性决定着是否要启动reduce任务的另一个实例</td>
+</tr>
+</tbody>
+</table>
+<p>为什么会想到关闭推测执行？推测执行的目的是减少作业执行时间，但这是以集群效率为代价的。在一个繁忙的集群中，推测执行会减少整体的吞吐量，因为冗余任务的执行时会减少作业的执行时间。因此，一些集群管理员倾向于在集群上关闭此选项，而让用户根据个别作业需要而开启该功能。</p>
+<p>对于reduce任务，关闭推测执行是有益的，因为任务重复的reduce任务都必须将取得map输出作为最先的任务，这可能会大幅度地增加集群上的网络传输。</p>
+<h3 id="关于OutputCommitters"><a href="#关于OutputCommitters" class="headerlink" title="关于OutputCommitters"></a>关于OutputCommitters</h3><p>Hadoop MapReduce使用一个提交协议来确保作业和任务都完全成功或失败。这个行为通过对作业使用<code>OutputCommitter</code>来实现。默认值为<code>FileOutputCommitter</code>，这对基于文件的MapReduce是适合的。可以定制已有的OutputCommitter，或者在需要时还可以写一个新的实现以完成对作业或任务的特别设置或清理。</p>
+<p>OutputCommitter的API如下所示。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">OutputCommitter</span> </span></span><br><span class="line"><span class="class">                <span class="keyword">extends</span> <span class="title">org</span>.<span class="title">apache</span>.<span class="title">hadoop</span>.<span class="title">mapreduce</span>.<span class="title">OutputCommitter</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">setupJob</span><span class="params">(JobContext jobContext)</span> <span class="keyword">throws</span> IOException</span>;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Deprecated</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">cleanupJob</span><span class="params">(JobContext jobContext)</span> <span class="keyword">throws</span> IOException </span>&#123; &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">commitJob</span><span class="params">(JobContext jobContext)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    cleanupJob(jobContext);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">abortJob</span><span class="params">(JobContext jobContext, <span class="keyword">int</span> status)</span> </span></span><br><span class="line"><span class="function">  <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    cleanupJob(jobContext);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">setupTask</span><span class="params">(TaskAttemptContext taskContext)</span></span></span><br><span class="line"><span class="function">  <span class="keyword">throws</span> IOException</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">boolean</span> <span class="title">needsTaskCommit</span><span class="params">(TaskAttemptContext taskContext)</span></span></span><br><span class="line"><span class="function">  <span class="keyword">throws</span> IOException</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">commitTask</span><span class="params">(TaskAttemptContext taskContext)</span></span></span><br><span class="line"><span class="function">  <span class="keyword">throws</span> IOException</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">abortTask</span><span class="params">(TaskAttemptContext taskContext)</span></span></span><br><span class="line"><span class="function">  <span class="keyword">throws</span> IOException</span>;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Deprecated</span></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isRecoverySupported</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isRecoverySupported</span><span class="params">(JobContext jobContext)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> isRecoverySupported();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isCommitJobRepeatable</span><span class="params">(JobContext jobContext)</span> <span class="keyword">throws</span></span></span><br><span class="line"><span class="function">      IOException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isCommitJobRepeatable</span><span class="params">(org.apache.hadoop.mapreduce.JobContext</span></span></span><br><span class="line"><span class="function"><span class="params">      jobContext)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> isCommitJobRepeatable((JobContext) jobContext);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">recoverTask</span><span class="params">(TaskAttemptContext taskContext)</span> </span></span><br><span class="line"><span class="function">  <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setupJob</span><span class="params">(org.apache.hadoop.mapreduce.JobContext jobContext</span></span></span><br><span class="line"><span class="function"><span class="params">                             )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    setupJob((JobContext) jobContext);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="meta">@Deprecated</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">cleanupJob</span><span class="params">(org.apache.hadoop.mapreduce.JobContext context</span></span></span><br><span class="line"><span class="function"><span class="params">                               )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    cleanupJob((JobContext) context);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">commitJob</span><span class="params">(org.apache.hadoop.mapreduce.JobContext context</span></span></span><br><span class="line"><span class="function"><span class="params">                             )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    commitJob((JobContext) context);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">abortJob</span><span class="params">(org.apache.hadoop.mapreduce.JobContext context, </span></span></span><br><span class="line"><span class="function"><span class="params">		                   org.apache.hadoop.mapreduce.JobStatus.State runState)</span> </span></span><br><span class="line"><span class="function">  <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> state = JobStatus.getOldNewJobRunState(runState);</span><br><span class="line">    <span class="keyword">if</span> (state != JobStatus.FAILED &amp;&amp; state != JobStatus.KILLED) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IOException (<span class="string">"Invalid job run state : "</span> + runState.name());</span><br><span class="line">    &#125;</span><br><span class="line">    abortJob((JobContext) context, state);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">final</span> </span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">setupTask</span><span class="params">(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext</span></span></span><br><span class="line"><span class="function"><span class="params">                 )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    setupTask((TaskAttemptContext) taskContext);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> </span><br><span class="line">    needsTaskCommit(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext</span><br><span class="line">                    ) <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">    <span class="keyword">return</span> needsTaskCommit((TaskAttemptContext) taskContext);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">final</span> </span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">commitTask</span><span class="params">(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext</span></span></span><br><span class="line"><span class="function"><span class="params">                  )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    commitTask((TaskAttemptContext) taskContext);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">final</span> </span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">abortTask</span><span class="params">(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext</span></span></span><br><span class="line"><span class="function"><span class="params">                 )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    abortTask((TaskAttemptContext) taskContext);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">final</span> </span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">recoverTask</span><span class="params">(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext</span></span></span><br><span class="line"><span class="function"><span class="params">      )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    recoverTask((TaskAttemptContext) taskContext);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">isRecoverySupported</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">      org.apache.hadoop.mapreduce.JobContext context)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> isRecoverySupported((JobContext) context);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>setupJob()</code>方法在作业运行前调用，通常用来执行初始化操作。例如FileOutputCommitter会创建最终的输出目录，并且为任务输出创建一个临时的工作工具，<code>_temporary</code>，作为最终输出目录的子目录。</p>
+<p>如果作业成功，就调用<code>commitJob()</code>方法，在默认的基于文件的实现中，它用于删除临时的工作空间并在输出目录中创建一个名为<code>_SUCCESS</code>的隐藏的标识文件，以此告知文件系统的客户端该作业成功完成了。如果作业不成功，就通过状态对象调用<code>abortJob()</code>，意味着该作业是否失败或终止（例如由用户终止）。在默认的实现中，将删除作业的临时工作空间。</p>
+<p>在任务级别的操作上于此类似。在任务执行之前先调用<code>setupTask()</code>方法，默认的实现是不做任何事情，因为针对任务输出命名的临时目录在写任务输出的时候被创建。</p>
+<p>任务的提交阶段是可选的，并通过从<code>needsTaskCommit()</code>返回的false值关闭它。这使得执行框架不必为任务运行分布提交协议，也不需要<code>commitTask()</code>或者<code>abortTask()</code>。当一个任务没有写任何输出时，FileOutputCommitter将跳过提交阶段。</p>
+<p>如果任务成功，就调用<code>commitTask()</code>，在默认的实现中它将临时的输出目录移动到最后的输出路径。否则，执行框架调用<code>abortTask()</code>，它负责删除临时的任务输出目录。</p>
+<p>执行框架保证特定任务在有多次任务尝试的情况下，只有一个任务会被提交，其他的则被取消。这种情况是可能出现的，因为第一次尝试出于某个原因而失败，提交的是稍后成功的尝试。另一种情况是如果两个任务尝试作为推测副本同时运行，则提交先完成的，而另一个被取消。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章介绍了MapReduce向YARN框架的提交流程，说明了客户端、ResourceManager、NodeManager、Application Master以及Task之间是如何交互的。任务在提交时会将任务信息上传到HDFS，并在某个容器中启动Application Master，之后由Application Master负责向ResourceManager申请资源，以启动不同的任务。此外，我们还介绍了任务在运行过程中各个组件的失败情况。基本上可以说，无论是任务、还是Application Master，以及ResourceManager和NodeManager，都有相应的恢复机制，这也是使用YARN的优势之一。最后我们介绍了关于推测执行的相关概念，它只是一种优化手段，当某个任务的运行时间高于任务的平均运行时间时，框架就会尝试启动一个推测副本任务，谁先执行完，就将另一个中止。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>如果您觉得不错，请赞赏一下!</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.jpg" alt="XiaoXiGua 微信支付">
+        <p>微信支付</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="/images/alipay.jpg" alt="XiaoXiGua 支付宝">
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/24/YARN-Scheduler/" rel="next" title="【Hadoop19】：YARN调度器">
+                <i class="fa fa-chevron-left"></i> 【Hadoop19】：YARN调度器
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": false,
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "douban", "sqq", "qzone", "weixin", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/girl.png" alt="XiaoXiGua">
+            
+              <p class="site-author-name" itemprop="name">XiaoXiGua</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/">
+              
+                  <span class="site-state-item-count">22</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MapReduce作业运行机制"><span class="nav-number">2.</span> <span class="nav-text">MapReduce作业运行机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#作业的提交"><span class="nav-number">2.1.</span> <span class="nav-text">作业的提交</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#作业的初始化"><span class="nav-number">2.2.</span> <span class="nav-text">作业的初始化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#任务的分配"><span class="nav-number">2.3.</span> <span class="nav-text">任务的分配</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#任务的执行"><span class="nav-number">2.4.</span> <span class="nav-text">任务的执行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#进度和状态更新"><span class="nav-number">2.5.</span> <span class="nav-text">进度和状态更新</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#作业的完成"><span class="nav-number">2.6.</span> <span class="nav-text">作业的完成</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#失败"><span class="nav-number">3.</span> <span class="nav-text">失败</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#任务运行失败"><span class="nav-number">3.1.</span> <span class="nav-text">任务运行失败</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Application-Master运行失败"><span class="nav-number">3.2.</span> <span class="nav-text">Application Master运行失败</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NodeManager运行失败"><span class="nav-number">3.3.</span> <span class="nav-text">NodeManager运行失败</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ResourceManager运行失败"><span class="nav-number">3.4.</span> <span class="nav-text">ResourceManager运行失败</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#任务的执行-1"><span class="nav-number">4.</span> <span class="nav-text">任务的执行</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#任务执行环境"><span class="nav-number">4.1.</span> <span class="nav-text">任务执行环境</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#推测执行"><span class="nav-number">4.2.</span> <span class="nav-text">推测执行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#关于OutputCommitters"><span class="nav-number">4.3.</span> <span class="nav-text">关于OutputCommitters</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">XiaoXiGua</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Gemini</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+  
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz',
+        appKey: 'wqOgPg0cXQillOPzrXScXSHa',
+        placeholder: '欢迎评论',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
+
+
+
+  
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.4.js"></script>
+  <script>AV.initialize("dDxCrK56emxLy8ou4rfyJ9gK-gzGzoHsz", "wqOgPg0cXQillOPzrXScXSHa");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
