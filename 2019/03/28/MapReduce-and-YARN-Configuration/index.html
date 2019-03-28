@@ -79,17 +79,17 @@
 
 
 
-<meta name="description" content="已经工作好几年了，从刚开始做JavaEE开发，转向做大数据应用开发，到现在的大数据平台研发。知识越来越多，学到的技术也越来越多。以前是自己做笔记，写各种各样的文档，不过都没有公开，只是自己偶尔会去翻看，或者放到公司的Wiki上。自从到了新公司后，每周都有技术分享环节，自己也分享了很多次。在分享的过程中，慢慢发现通过这个环节，能够更好的加强自己对于技术点、架构设计的理解，而且将自己的所学与大家分享，">
+<meta name="description" content="前言在前几章中，我们已经对MapReduce以及YARN有了初步的认识，并能够编写一些常见的MapReduce程序。此外，还学习了MapReduce任务的执行流程（任务提交、任务执行、容错、Shuffle等）等。在实际场景中，我们往往希望任务运行的更快一些，效率更高一些，这时候就需要对框架或作业进行一些配置优化了。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="博客介绍">
-<meta property="og:url" content="http://yoursite.com/2019/03/03/Introduce-Blog/index.html">
+<meta property="og:title" content="【Hadoop21】：MapReduce与YARN常用配置">
+<meta property="og:url" content="http://yoursite.com/2019/03/28/MapReduce-and-YARN-Configuration/index.html">
 <meta property="og:site_name" content="小西瓜">
-<meta property="og:description" content="已经工作好几年了，从刚开始做JavaEE开发，转向做大数据应用开发，到现在的大数据平台研发。知识越来越多，学到的技术也越来越多。以前是自己做笔记，写各种各样的文档，不过都没有公开，只是自己偶尔会去翻看，或者放到公司的Wiki上。自从到了新公司后，每周都有技术分享环节，自己也分享了很多次。在分享的过程中，慢慢发现通过这个环节，能够更好的加强自己对于技术点、架构设计的理解，而且将自己的所学与大家分享，">
+<meta property="og:description" content="前言在前几章中，我们已经对MapReduce以及YARN有了初步的认识，并能够编写一些常见的MapReduce程序。此外，还学习了MapReduce任务的执行流程（任务提交、任务执行、容错、Shuffle等）等。在实际场景中，我们往往希望任务运行的更快一些，效率更高一些，这时候就需要对框架或作业进行一些配置优化了。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-03-07T13:32:54.444Z">
+<meta property="og:updated_time" content="2019-03-28T14:36:21.964Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="博客介绍">
-<meta name="twitter:description" content="已经工作好几年了，从刚开始做JavaEE开发，转向做大数据应用开发，到现在的大数据平台研发。知识越来越多，学到的技术也越来越多。以前是自己做笔记，写各种各样的文档，不过都没有公开，只是自己偶尔会去翻看，或者放到公司的Wiki上。自从到了新公司后，每周都有技术分享环节，自己也分享了很多次。在分享的过程中，慢慢发现通过这个环节，能够更好的加强自己对于技术点、架构设计的理解，而且将自己的所学与大家分享，">
+<meta name="twitter:title" content="【Hadoop21】：MapReduce与YARN常用配置">
+<meta name="twitter:description" content="前言在前几章中，我们已经对MapReduce以及YARN有了初步的认识，并能够编写一些常见的MapReduce程序。此外，还学习了MapReduce任务的执行流程（任务提交、任务执行、容错、Shuffle等）等。在实际场景中，我们往往希望任务运行的更快一些，效率更高一些，这时候就需要对框架或作业进行一些配置优化了。">
 
 
 
@@ -119,13 +119,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/03/Introduce-Blog/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/28/MapReduce-and-YARN-Configuration/">
 
 
 
 
 
-  <title>博客介绍 | 小西瓜</title>
+  <title>【Hadoop21】：MapReduce与YARN常用配置 | 小西瓜</title>
   
 
 
@@ -252,7 +252,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/03/Introduce-Blog/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/28/MapReduce-and-YARN-Configuration/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="XiaoXiGua">
@@ -269,7 +269,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">博客介绍</h2>
+          <h2 class="post-title" itemprop="name headline">【Hadoop21】：MapReduce与YARN常用配置</h2>
         
 
         <div class="post-meta">
@@ -281,8 +281,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-03T12:43:45+08:00">
-                2019-03-03
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-28T22:35:49+08:00">
+                2019-03-28
               </time>
             
 
@@ -304,8 +304,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/随便聊聊/" itemprop="url" rel="index">
-                    <span itemprop="name">随便聊聊</span>
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
                   </a>
                 </span>
 
@@ -322,8 +322,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2019/03/03/Introduce-Blog/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/03/Introduce-Blog/" itemprop="commentCount"></span>
+                <a href="/2019/03/28/MapReduce-and-YARN-Configuration/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/28/MapReduce-and-YARN-Configuration/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -331,7 +331,7 @@
 
           
           
-             <span id="/2019/03/03/Introduce-Blog/" class="leancloud_visitors" data-flag-title="博客介绍">
+             <span id="/2019/03/28/MapReduce-and-YARN-Configuration/" class="leancloud_visitors" data-flag-title="【Hadoop21】：MapReduce与YARN常用配置">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -362,7 +362,205 @@
       
 
       
-        <p>已经工作好几年了，从刚开始做JavaEE开发，转向做大数据应用开发，到现在的大数据平台研发。知识越来越多，学到的技术也越来越多。以前是自己做笔记，写各种各样的文档，不过都没有公开，只是自己偶尔会去翻看，或者放到公司的Wiki上。自从到了新公司后，每周都有技术分享环节，自己也分享了很多次。在分享的过程中，慢慢发现通过这个环节，能够更好的加强自己对于技术点、架构设计的理解，而且将自己的所学与大家分享，也是一件很快乐的事情。所以，决定将自己在工作中或学习中的经验分享出来，希望自己和大家都有收获，也希望能够结识更多的朋友。</p>
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在前几章中，我们已经对MapReduce以及YARN有了初步的认识，并能够编写一些常见的MapReduce程序。此外，还学习了MapReduce任务的执行流程（任务提交、任务执行、容错、Shuffle等）等。在实际场景中，我们往往希望任务运行的更快一些，效率更高一些，这时候就需要对框架或作业进行一些配置优化了。</p>
+<a id="more"></a>
+<h2 id="MapReduce常用配置"><a href="#MapReduce常用配置" class="headerlink" title="MapReduce常用配置"></a>MapReduce常用配置</h2><p>我们首先来看下MapReduce常见的配置，这些配置基本上都可以在提交作业时通过<code>-D key=value</code>的方式进行制定。</p>
+<h3 id="内存相关"><a href="#内存相关" class="headerlink" title="内存相关"></a>内存相关</h3><table>
+<thead>
+<tr>
+<th>属性名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mapreduce.map.memory.mb</td>
+<td>设置map容器所用的内存容量，默认是1024</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.memory.mb</td>
+<td>设置reduce容器所用的内存容量，默认是1024</td>
+</tr>
+<tr>
+<td>mapred.child.java.opts</td>
+<td>JVM选项，用于启动运行map和reduce任务的容器进程。除了用于设置内存，该属性还包括JVM参数设置</td>
+</tr>
+<tr>
+<td>mapreduce.map.java.opts</td>
+<td>JVM选项，针对运行map任务的子进程</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.java.opts</td>
+<td>JVM选择，针对运行reduce任务的子进程</td>
+</tr>
+</tbody>
+</table>
+<p>这几个参数可能会有些让人混淆，我们举个例子来说明。例如，假设mapred.child.java.opts被设置为<code>-Xmx800m</code>，mapreduce.map.memory.mb为默认值1024MB，当map任务启动时，NodeManager会为该任务分配一个1024MB的容器（在该任务运行期间，NodeManager的内存池也会相应降低1024MB），并启动配置为最大堆为800MB的任务JVM。注意，JVM进程的内存开销将比该堆的规模要大，开销依赖于所使用的本地库、永久生成空间等因素。需要注意的是，JVM进程所使用的物理内存必须不超出分配给它的内存大小（1024MB）。如果一个容器使用的内存超过所分配的内存，就会被NodeManager中止，并标记为失败。</p>
+<h3 id="CPU设置"><a href="#CPU设置" class="headerlink" title="CPU设置"></a>CPU设置</h3><table>
+<thead>
+<tr>
+<th>属性名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mapreduce.map.cpu.vcores</td>
+<td>设置map任务所使用的CPU核心数，默认为1</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.cpu.vcores</td>
+<td>设置reduce任务所使用的CPU核心数，默认为1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="Shuffle相关"><a href="#Shuffle相关" class="headerlink" title="Shuffle相关"></a>Shuffle相关</h3><table>
+<thead>
+<tr>
+<th>属性名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mapreduce.task.io.sort.mb</td>
+<td>设置map任务输出时环形缓冲区大小，默认为100</td>
+</tr>
+<tr>
+<td>mapreduce.map.sort.spill.percent</td>
+<td>设置缓冲区数据溢写阈值，默认为0.80，即80%</td>
+</tr>
+<tr>
+<td>mapreduce.task.io.sort.factor</td>
+<td>map任务的溢写文件每次最多能合并多少流，默认为10</td>
+</tr>
+<tr>
+<td>mapreduce.map.combine.minspills</td>
+<td>运行combiner所需的最少溢出文件数</td>
+</tr>
+<tr>
+<td>mapreduce.map.output.compress</td>
+<td>map任务输出是否进行压缩，默认值是false</td>
+</tr>
+<tr>
+<td>mapreduce.map.output.compress.codec</td>
+<td>map任务输出的压缩格式</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.shuffle.parallelcopies</td>
+<td>reduce任务用于获取map任务输出内容的线程数，默认为5</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.shuffle.input.buffer.percent</td>
+<td>在shuffle的复制阶段，分配给map输出的缓冲区占堆空间的百分比，默认为0.70，即70%</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.shuffle.merge.percent</td>
+<td>map输出缓冲区的阈值使用比例，用于启动合并输出和磁盘一些的过程，默认为0.66，即66%</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.merge.inmem.threshold</td>
+<td>启动合并输出和磁盘溢写过程的map输出的阈值数，0或更小的数意味着没有阈值限制。默认为1000</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.input.buffer.percent</td>
+<td>在reduce过程中，在内存中保存map输出的空间占整个堆空间的比例。reduce阶段开始时，内存的map输出大小不能大于这个值。默认情况下，在reduce任务开始之前，所有map输出都合并到磁盘上，以便为reduce提供尽可能多的内存。然而，如果reduce需要的内存较少，可以增加此值来最小化访问磁盘的次数，默认为0.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="其他设置"><a href="#其他设置" class="headerlink" title="其他设置"></a>其他设置</h3><table>
+<thead>
+<tr>
+<th>属性名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mapreduce.map.maxattempts</td>
+<td>设置map任务的最大重试次数，默认为4</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.maxattempts</td>
+<td>设置reduce任务的最大重试次数，默认为4</td>
+</tr>
+<tr>
+<td>mapreduce.job.ubertask.enable</td>
+<td>是否启用Uber任务，默认为false</td>
+</tr>
+<tr>
+<td>mapreduce.job.ubertask.maxmaps</td>
+<td>Uber任务最多的map数量，默认为10</td>
+</tr>
+<tr>
+<td>mapreduce.job.uber.task.maxreduces</td>
+<td>Uber任务虽多的reduce数量，默认为1</td>
+</tr>
+<tr>
+<td>mapreduce.job.ubertask.maxbytes</td>
+<td>Uber任务的最大输入大小，默认是一个数据块的大小</td>
+</tr>
+<tr>
+<td>mapreduce.task.timeout</td>
+<td>map或reduce的任务超时时间，默认为10分钟</td>
+</tr>
+<tr>
+<td>mapreduce.map.failures.maxpercent</td>
+<td>map任务允许任务失败的最大百分比，默认为0</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.failures.maxpercent</td>
+<td>reduce任务允许任务失败的最大百分比，默认为0</td>
+</tr>
+<tr>
+<td>mapreduce.map.speculative</td>
+<td>是否开启map任务推测执行，默认为true</td>
+</tr>
+<tr>
+<td>mapreduce.reduce.speculative</td>
+<td>是否开启reduce任务推测执行，默认为true</td>
+</tr>
+</tbody>
+</table>
+<h2 id="YARN常用配置"><a href="#YARN常用配置" class="headerlink" title="YARN常用配置"></a>YARN常用配置</h2><table>
+<thead>
+<tr>
+<th>属性名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>yarn.nodemanager.resource.memory-mb</td>
+<td>NodeManager运行的容器可以分配到的物理内存容量，默认值为8192MB</td>
+</tr>
+<tr>
+<td>yarn.nodemanager.resource.cpu-vcores</td>
+<td>NodeManager运行的容器可以分配到的CPU核心数，默认为8</td>
+</tr>
+<tr>
+<td>yarn.nodemanager.vmem-pmem-ratio</td>
+<td>容器所占的虚拟内存和物理内存之比。该值指示了虚拟内存的使用可以超过所分配内存的量</td>
+</tr>
+<tr>
+<td>yarn.scheduler.minimum-allocation-mb</td>
+<td>为容器分配的最小内存，默认为1024MB</td>
+</tr>
+<tr>
+<td>yarn.scheduler.maximum-allocation-mb</td>
+<td>为容器分配的最大内存，默认为8192MB</td>
+</tr>
+<tr>
+<td>yarn.scheduler.minimum-allocation-vcores</td>
+<td>为容器分配的最小CPU核数，默认为1</td>
+</tr>
+<tr>
+<td>yarn.scheduler.maximum-allocation-vcores</td>
+<td>为容器分配的最大CPU核数，默认为4</td>
+</tr>
+</tbody>
+</table>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章主要介绍了MapReduce与YARN的一些常见配置参数，有内存相关、CPU相关、Shuffle相关、容错相关等。这些参数在特定的场景下非常有用，但是使用参数的前提是必须理解为什么要这样配置，原理是什么，才能够做到了然于胸。</p>
 
       
     </div>
@@ -416,15 +614,15 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
+              <a href="/2019/03/26/MapReduce-Submit-Job-to-YARN/" rel="next" title="【Hadoop20】：MapReduce任务提交到YARN">
+                <i class="fa fa-chevron-left"></i> 【Hadoop20】：MapReduce任务提交到YARN
+              </a>
+            
           </div>
 
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/03/Talk-About-What-is-the-Bigdata/" rel="prev" title="聊聊大数据">
-                聊聊大数据 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -506,8 +704,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -560,6 +767,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MapReduce常用配置"><span class="nav-number">2.</span> <span class="nav-text">MapReduce常用配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#内存相关"><span class="nav-number">2.1.</span> <span class="nav-text">内存相关</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CPU设置"><span class="nav-number">2.2.</span> <span class="nav-text">CPU设置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Shuffle相关"><span class="nav-number">2.3.</span> <span class="nav-text">Shuffle相关</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#其他设置"><span class="nav-number">2.4.</span> <span class="nav-text">其他设置</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#YARN常用配置"><span class="nav-number">3.</span> <span class="nav-text">YARN常用配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       

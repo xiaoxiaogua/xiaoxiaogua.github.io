@@ -87,7 +87,7 @@
 <meta property="og:description" content="前言前几章学习了YARN的基本概念与调度器，本章我们来学习MapReduce任务在提交时的流程，在提交时如何与YARN进行交互，并且讨论在任务运行过程中，各个组件如何进行故障恢复。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://i.imgur.com/KXhoV6O.png">
-<meta property="og:updated_time" content="2019-03-26T14:51:47.192Z">
+<meta property="og:updated_time" content="2019-03-28T14:19:22.082Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="【Hadoop20】：MapReduce任务提交到YARN">
 <meta name="twitter:description" content="前言前几章学习了YARN的基本概念与调度器，本章我们来学习MapReduce任务在提交时的流程，在提交时如何与YARN进行交互，并且讨论在任务运行过程中，各个组件如何进行故障恢复。">
@@ -412,7 +412,7 @@
 <p>任务挂起的处理方式则有不同。一旦Application Master注意到已经有一段时间没有收到进程的更新，变回将任务标记为失败。在此之后，任务JVM进程将被自动杀死。任务被任务失败的超时间隔通常为10分钟，可以以作业为基础（或以集群为基础）进行设置，对应的属性为<code>mapreduce.task.timeout</code>，单位为毫秒。</p>
 <p>超时设置为0将关闭超时判定，所以长时间运行的任务永远不会被标记为失败。在这种情况下，被挂起的任务永远不会释放它的容器并随着时间的推移最终降低整个集群的效率。因此，尽量避免这种设置，同时充分确保每个任务能够定期汇报其进度。</p>
 <p>Application Master被告知一个任务尝试失败后，将重新调度该任务的执行。Application Master会试图避免在以前失败过的NodeManager上重新调度该任务。此外，如果一个任务失败过4次，将不会再充实。这个值时可以设置的：对于map任务，运行任务的最多尝试次数由<code>mapreduce.map.maxattemptes</code>属性控制；对于reduce任务，则由<code>mapreduce.reduce.maxattempts</code>属性控制。在默认情况下，如果任何任务失败次数大于4，整个作业都会失败。</p>
-<p>对于一些应用程序，我们不希望一旦有少数几个任务失败就中止整个作业，因为即使有任务失败，作业的一些结果可能还是可用的。在这种情况下，可用为作业设置在不触发作业失败的情况下允许任务失败的最大宝粉币。针对map任务和reduce任务的设置可以通过<code>mapreduce.map.failures.maxpercent</code>和<code>mapreduce.reduce.failures,maxpercent</code>这两个属性来完成。</p>
+<p>对于一些应用程序，我们不希望一旦有少数几个任务失败就中止整个作业，因为即使有任务失败，作业的一些结果可能还是可用的。在这种情况下，可用为作业设置在不触发作业失败的情况下允许任务失败的最大百分比。针对map任务和reduce任务的设置可以通过<code>mapreduce.map.failures.maxpercent</code>和<code>mapreduce.reduce.failures.maxpercent</code>这两个属性来完成。</p>
 <p>任务尝试也是可以中止的，这与失败不同。任务尝试可以被中止是因为它是一个推测任务或因为它所处的NodeManager失败，导致Application Master将它上面运行的所有任务尝试标记为<code>killed</code>。被中止的任务尝试不会被计入任务运行尝试次数，因为尝试被中止并不是任务的过错。</p>
 <p>用户也可以使用Web UI或命令行来手动中止或取消任务尝试。</p>
 <h3 id="Application-Master运行失败"><a href="#Application-Master运行失败" class="headerlink" title="Application Master运行失败"></a>Application Master运行失败</h3><p>YARN中的应用程序在运行失败的时候会有几次尝试机会，就像MapReduce任务在遇到硬件或网络故障时要进行几次尝试一样。运行MapReduce Application Master的最多尝试次数由<code>mapreduce.am.max-attempts</code>属性控制，默认值是2，即如果Application Master失败两次，便不会再进行尝试，作业将失败。</p>
@@ -575,6 +575,10 @@
 
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2019/03/28/MapReduce-and-YARN-Configuration/" rel="prev" title="【Hadoop21】：MapReduce与YARN常用配置">
+                【Hadoop21】：MapReduce与YARN常用配置 <i class="fa fa-chevron-right"></i>
+              </a>
+            
           </div>
         </div>
       
@@ -682,7 +686,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">22</span>
+                  <span class="site-state-item-count">23</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
