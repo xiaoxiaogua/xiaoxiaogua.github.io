@@ -79,19 +79,22 @@
 
 
 
-<meta name="description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
+<meta name="description" content="前言到目前为止，我们已经对HDFS、MapReduce和YARN有了一定的认识，能够使用HDFS客户端与HDFS集群进行交互，例如上传、下载、追加文件，并且了解了HDFS中NameNode、DataNode的基本作用；也能够编写一些常见的MapReduce程序，提交到YARN上运行，并根据实际情况进行一些调优。可以这样说，我们已经达到了基本能够熟练使用框架的阶段了，但是这远远不够。要掌握一个框架，">
 <meta property="og:type" content="article">
-<meta property="og:title" content="【Hadoop11】：MapReduce分区器">
-<meta property="og:url" content="http://yoursite.com/2019/03/10/MapReduce-Partitioner/index.html">
+<meta property="og:title" content="【Hadoop23】：NameNode核心功能">
+<meta property="og:url" content="http://yoursite.com/2019/03/31/HDFS-NameNode-Core/index.html">
 <meta property="og:site_name" content="小西瓜">
-<meta property="og:description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
+<meta property="og:description" content="前言到目前为止，我们已经对HDFS、MapReduce和YARN有了一定的认识，能够使用HDFS客户端与HDFS集群进行交互，例如上传、下载、追加文件，并且了解了HDFS中NameNode、DataNode的基本作用；也能够编写一些常见的MapReduce程序，提交到YARN上运行，并根据实际情况进行一些调优。可以这样说，我们已经达到了基本能够熟练使用框架的阶段了，但是这远远不够。要掌握一个框架，">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://i.imgur.com/A2c4JRu.png">
-<meta property="og:updated_time" content="2019-03-31T06:36:56.892Z">
+<meta property="og:image" content="https://i.imgur.com/IUI4NPP.png">
+<meta property="og:image" content="https://i.imgur.com/7PRSYqe.png">
+<meta property="og:image" content="https://i.imgur.com/NMj3AZ0.png">
+<meta property="og:image" content="https://i.imgur.com/7ulGB7m.png">
+<meta property="og:updated_time" content="2019-03-31T06:40:30.350Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="【Hadoop11】：MapReduce分区器">
-<meta name="twitter:description" content="前言到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，">
-<meta name="twitter:image" content="https://i.imgur.com/A2c4JRu.png">
+<meta name="twitter:title" content="【Hadoop23】：NameNode核心功能">
+<meta name="twitter:description" content="前言到目前为止，我们已经对HDFS、MapReduce和YARN有了一定的认识，能够使用HDFS客户端与HDFS集群进行交互，例如上传、下载、追加文件，并且了解了HDFS中NameNode、DataNode的基本作用；也能够编写一些常见的MapReduce程序，提交到YARN上运行，并根据实际情况进行一些调优。可以这样说，我们已经达到了基本能够熟练使用框架的阶段了，但是这远远不够。要掌握一个框架，">
+<meta name="twitter:image" content="https://i.imgur.com/IUI4NPP.png">
 
 
 
@@ -121,13 +124,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/10/MapReduce-Partitioner/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/31/HDFS-NameNode-Core/">
 
 
 
 
 
-  <title>【Hadoop11】：MapReduce分区器 | 小西瓜</title>
+  <title>【Hadoop23】：NameNode核心功能 | 小西瓜</title>
   
 
 
@@ -254,7 +257,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/10/MapReduce-Partitioner/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/31/HDFS-NameNode-Core/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="XiaoXiGua">
@@ -271,7 +274,7 @@
 
         
         
-          <h2 class="post-title" itemprop="name headline">【Hadoop11】：MapReduce分区器</h2>
+          <h2 class="post-title" itemprop="name headline">【Hadoop23】：NameNode核心功能</h2>
         
 
         <div class="post-meta">
@@ -283,8 +286,8 @@
               
                 <span class="post-meta-item-text">发表于</span>
               
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-10T12:22:45+08:00">
-                2019-03-10
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-31T14:39:27+08:00">
+                2019-03-31
               </time>
             
 
@@ -324,8 +327,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2019/03/10/MapReduce-Partitioner/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/10/MapReduce-Partitioner/" itemprop="commentCount"></span>
+                <a href="/2019/03/31/HDFS-NameNode-Core/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/31/HDFS-NameNode-Core/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -333,7 +336,7 @@
 
           
           
-             <span id="/2019/03/10/MapReduce-Partitioner/" class="leancloud_visitors" data-flag-title="【Hadoop11】：MapReduce分区器">
+             <span id="/2019/03/31/HDFS-NameNode-Core/" class="leancloud_visitors" data-flag-title="【Hadoop23】：NameNode核心功能">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -364,27 +367,51 @@
       
 
       
-        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>到目前为止，我们编写的所有MapReduce只有一个Reducer任务。Map任务可能有多个，因为通过输入分片的机制，将数据源切分为多个分片，每个分片由一个Map任务进行处理。在一些特殊的场景下，我们可能要对数据进行分组，将不同类型的数据处理后存放到不同的目标文件中。由于Reducer任务只有一个，所有Map任务的输出只会由单独的Reducer任务进行处理，因此所生成的数据文件只有一个。这时，分区器（Partitioner）就出现了。</p>
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>到目前为止，我们已经对HDFS、MapReduce和YARN有了一定的认识，能够使用HDFS客户端与HDFS集群进行交互，例如上传、下载、追加文件，并且了解了HDFS中NameNode、DataNode的基本作用；也能够编写一些常见的MapReduce程序，提交到YARN上运行，并根据实际情况进行一些调优。可以这样说，我们已经达到了基本能够熟练使用框架的阶段了，但是这远远不够。要掌握一个框架，不仅仅是会用，还需要了解其底层的运行原理。在接下来的一些文章中，我们将会从底层对HDFS框架进行深入学习，掌握其底层运行机制，并在必要时进行源码剖析。</p>
 <a id="more"></a>
-<h2 id="Partitioner介绍"><a href="#Partitioner介绍" class="headerlink" title="Partitioner介绍"></a>Partitioner介绍</h2><p>分区器（Partitioner）可以根据自定义的规则，将数据划分到不同的分区内，每个分区由对应的Reducer进行处理。此外，分区的数量要和Reducer任务的数量保持一致，否则不同分区的数据无法分散到不同的Reducer任务上，就失去了分区的意义了。</p>
-<p>我们可以通过继承<code>Partitioner</code>抽象类来定义分区规则，首先来看一下该类的源码。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Partitioner</span>&lt;<span class="title">KEY</span>, <span class="title">VALUE</span>&gt; </span>&#123;</span><br><span class="line">  </span><br><span class="line">  <span class="comment">/** </span></span><br><span class="line"><span class="comment">   * Get the partition number for a given key (hence record) given the total </span></span><br><span class="line"><span class="comment">   * number of partitions i.e. number of reduce-tasks for the job.</span></span><br><span class="line"><span class="comment">   *   </span></span><br><span class="line"><span class="comment">   * &lt;p&gt;Typically a hash function on a all or a subset of the key.&lt;/p&gt;</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> key the key to be partioned.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> value the entry value.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> numPartitions the total number of partitions.</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@return</span> the partition number for the &lt;code&gt;key&lt;/code&gt;.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">int</span> <span class="title">getPartition</span><span class="params">(KEY key, VALUE value, <span class="keyword">int</span> numPartitions)</span></span>;</span><br><span class="line">  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>该类中只有一个<code>getPartition()</code>方法，在Map任务输出之前，会调用该方法将Key-Value作为参数传递，获取到对应的分区编号。</p>
-<p>默认情况下，我们是没有指定分区器的，Hadoop也为我们提供了一些内置的分区器，如图所示。</p>
-<p><img src="https://i.imgur.com/A2c4JRu.png" alt></p>
-<p>如果我们要使用自定义的Partitioner，需要在Job实例中进行设置，如下所示。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置分区器</span></span><br><span class="line">job.setPartitionerClass(YourPartitioner.class);</span><br><span class="line"><span class="comment">// Reducer任务的数量要和分区器中分区数量一致</span></span><br><span class="line">job.setNumReduceTasks(N);</span><br></pre></td></tr></table></figure>
-<h2 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h2><p>WordCount案例，对单词进行个数统计，将首字母为大写的单词与其他单词的统计结果分类存放。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Hadoop hadoop</span><br><span class="line">YARN yarn</span><br><span class="line">MapReduce mapreduce</span><br><span class="line">Spark spark</span><br><span class="line">Hadoop hadoop</span><br><span class="line">YARN yarn</span><br><span class="line">MapReduce mapreduce</span><br><span class="line">Spark spark</span><br></pre></td></tr></table></figure>
-<p>在这个案例中，只需要有2个分区就够了，一个分区存放首字母为大写的数据，另外一个分区存放其他数据。</p>
-<p>Mapper和Reducer的逻辑这里就不过多描述了，想必大家应该很熟悉。</p>
-<p>下面是我们自定义的Partitioner。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WordCountPartitioner</span> <span class="keyword">extends</span> <span class="title">Partitioner</span>&lt;<span class="title">Text</span>, <span class="title">VIntWritable</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getPartition</span><span class="params">(Text text, VIntWritable vIntWritable, <span class="keyword">int</span> numPartitions)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 获取首字母</span></span><br><span class="line">        <span class="keyword">char</span> first = text.toString().charAt(<span class="number">0</span>);</span><br><span class="line">        <span class="keyword">if</span> (first &gt;= <span class="string">'A'</span> &amp;&amp; first &lt;= <span class="string">'Z'</span>) &#123;</span><br><span class="line">            <span class="comment">// 首字母大写</span></span><br><span class="line">            <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>在Job实例中，设置我们自定义的Partitioner以及Reducer任务的个数。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 设置分区器</span></span><br><span class="line">job.setPartitionerClass(WordCountPartitioner.class);</span><br><span class="line"><span class="comment">// Reducer任务的数量要和分区器中分区数量一致</span></span><br><span class="line">job.setNumReduceTasks(<span class="number">2</span>);</span><br></pre></td></tr></table></figure>
-<p>运行结果分为两个文件，由两个Reducer任务输出而成。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># part-r-00000</span><br><span class="line">Hadoop	2</span><br><span class="line">MapReduce	2</span><br><span class="line">Spark	2</span><br><span class="line">YARN	2</span><br><span class="line"></span><br><span class="line"># part-r-00001</span><br><span class="line">hadoop	2</span><br><span class="line">mapreduce	2</span><br><span class="line">spark	2</span><br><span class="line">yarn	2</span><br></pre></td></tr></table></figure>
-<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>本章我们学习了在MapReducer中分区器（Partitioner）的概念以及使用方式。分区器可以很方便的将数据进行分类，通过自定义的分区逻辑，返回不同数据对应的分区编号。此外，分区的数量要和Reducer任务的数量保持一致，否则不同类型的数据会由相同的Reducer任务处理，就没有分区的效果了。</p>
+<h2 id="NameNode核心功能"><a href="#NameNode核心功能" class="headerlink" title="NameNode核心功能"></a>NameNode核心功能</h2><p>在Hadoop介绍时，我们简单介绍过HDFS框架中分为NameNode和DataNode两个角色。一个HDFS集群由一个NameNode和多个DataNode节点组成，是一个典型的Master/Slave架构。那么NameNode作用是什么呢？</p>
+<p>简单来说，NameNode有两大核心功能：</p>
+<ol>
+<li>文件系统目录树管理</li>
+<li>数据块管理</li>
+</ol>
+<h3 id="文件系统目录树管理"><a href="#文件系统目录树管理" class="headerlink" title="文件系统目录树管理"></a>文件系统目录树管理</h3><p>我们保存在HDFS上的数据文件，其元数据是在NameNode的内存中以<code>树状</code>结构维护的（真正的数据块保存在DataNode节点），整个目录树以”/“作为根节点，数据文件的元数据存放在根节点或根节点的子目录下。什么意思呢？文件系统都是有层次结构的，因此这种结构使用树状的数据结构来维护最合适不过了。实际上，在HDFS中，无论是文件还是目录，都可以被看做是一个<code>INode</code>对象，我们创建的目录以及上传的文件，其元数据都会由一个具体的INode对象来保存其信息，并且将INode对象存放在目录树的合适位置，下面我们用画图的方式来说明。</p>
+<p><img src="https://i.imgur.com/IUI4NPP.png" alt></p>
+<p>刚创建集群的时候，目录树只有一个根节点，没有任何数据。</p>
+<p><img src="https://i.imgur.com/7PRSYqe.png" alt></p>
+<p>下面创建一个目录，名称为user，其父目录是根节点。</p>
+<p><img src="https://i.imgur.com/NMj3AZ0.png" alt></p>
+<p>在根目录下上传一个文件a.txt。</p>
+<p>很容易理解吧，有了这样的数据结构之后，可以很方便的对节点进行管理，例如，要查看某个节点下的所有子节点，只需要找到该节点，遍历其子节点就可以了（INode类中的<code>children</code>字段就是其子节点的引用）。</p>
+<p>不知道大家是否注意到了，NameNode是在内存中维护这个数据结构的，如果NameNode节点宕机了，内存中的数据不就全丢失了么，没有了这些元数据，那集群就没法儿使用了。</p>
+<p>为什么不把这些信息保存到磁盘上呢？成本太高了，每次对目录树的操作，都要持久化到磁盘上，NameNode的性能就跟不上了，而且目录树的操作不是顺序执行的，比如将某个目录下数据移动到另外一个目录，在根目录创建其他目录等，在磁盘上维护对应的数据结构太麻烦了。</p>
+<p>考虑一种折中的方式，不要每次目录树发生变化了，就持久化到磁盘，可以隔一段时间，将目录树的信息全部刷到磁盘上。实际上NameNode就是这样做的，HDFS会将目录树的信息保存到本地磁盘上一个叫做<code>fsimage</code>的文件中，有了这个文件后，NameNode每次重启时就能够将命名空间恢复了。</p>
+<p>还有一个问题，既然是隔一段时间去持久化一次，那么在两次持久化之间，如果节点宕机了，岂不是就会丢失一部分数据？NameNode还有一个操作日志的概念，对于目录树的修改操作（创建、删除、移动等），都会先将操作信息写到一个<code>editlog</code>文件中，这个文件是直接持久化到磁盘的，写完editlog后，再对目录树进行相应的内存中数据结构变化。有了editlog后，NameNode在启动时，通过fsimage + editlog的文件就可以做到恢复整个文件目录树结构了。</p>
+<p>还记得我们在<code>core-site.xml</code>文件的配置信息吗？</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;property&gt;</span><br><span class="line">    &lt;name&gt;hadoop.tmp.dir&lt;/name&gt;</span><br><span class="line">    &lt;value&gt;/data/hadoop&lt;/value&gt;</span><br><span class="line">&lt;/property&gt;</span><br></pre></td></tr></table></figure>
+<p>该目录就是Hadoop存放数据文件的目录，我们进入这个目录看一眼。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[hadoop@hadoop01 hadoop]$ <span class="built_in">pwd</span></span><br><span class="line">/data/hadoop</span><br><span class="line">[hadoop@hadoop01 hadoop]$ ll</span><br><span class="line">total 0</span><br><span class="line">drwxrwxr-x 4 hadoop hadoop 30 Mar  3 21:53 dfs</span><br><span class="line">drwxr-xr-x 5 hadoop hadoop 57 Mar 24 18:36 nm-local-dir</span><br></pre></td></tr></table></figure>
+<p>其中<code>dfs</code>目录是HDFS的数据存放目录，<code>nm-local-dir</code>是NodeNamager的数据存放目录。</p>
+<p>进入dfs目录。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[hadoop@hadoop01 dfs]$ <span class="built_in">pwd</span></span><br><span class="line">/data/hadoop/dfs</span><br><span class="line">[hadoop@hadoop01 dfs]$ ll</span><br><span class="line">total 0</span><br><span class="line">drwx------ 3 hadoop hadoop 40 Mar 31 12:21 data</span><br><span class="line">drwxrwxr-x 3 hadoop hadoop 40 Mar 31 12:20 name</span><br></pre></td></tr></table></figure>
+<p>其中<code>data</code>目录是DataNode存放数据块的目录，<code>name</code>目录是NameNode存放editlog和fsimage的目录。</p>
+<p>进入name目录，查看信息。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[hadoop@hadoop01 name]$ tree</span><br><span class="line">.</span><br><span class="line">├── current</span><br><span class="line">│   ├── edits_0000000000000007693-0000000000000007799</span><br><span class="line">│   ├── edits_0000000000000007800-0000000000000007908</span><br><span class="line">│   ├── edits_inprogress_0000000000000007909</span><br><span class="line">│   ├── fsimage_0000000000000007799</span><br><span class="line">│   ├── fsimage_0000000000000007799.md5</span><br><span class="line">│   ├── fsimage_0000000000000007908</span><br><span class="line">│   ├── fsimage_0000000000000007908.md5</span><br><span class="line">│   ├── seen_txid</span><br><span class="line">│   └── VERSION</span><br><span class="line">└── in_use.lock</span><br></pre></td></tr></table></figure>
+<p>我们先来看editlog文件。在对NameNode命名空间进行修改操作时，每个操作都会赋予一个唯一递增的编号，作为操作ID（也叫做事务ID）。一个editlog的文件名称有两种形式，一种是<code>edits_xxxx-xxxx</code>，另外一种是<code>edits_inprogress_xxx</code>。操作记录会写入到editlog文件中，但是并不是只向一个文件中写吧？每次刷新fsimage到磁盘时，都会生成一个新的editlog，或者当editlog达到一定大小时，就会创建一个新的editlog文件。我们举例说，假如刚创建了一个集群，此时操作ID为0，那么会在磁盘上创建一个<code>edits_inprogress_0</code>的文件（省略了一些0），所有的操作日志都会写入到该文件中。假如现在已经写入了1000条日志了，fsimage开始刷新，此时就会创建一个新的editlog文件，名称为<code>edits_inprogress_000***1000</code>，并将之前的文件命名为<code>edits_0-999</code>。</p>
+<p>fsimage文件在刷新到磁盘上时，会根据操作ID的编号进行命名，还是上面的例子，写入了1000条日志，那么刷新的fsimage文件的名称就是<code>fsimage_999</code>。在重启恢复时，先读取fsimage文件，读取之后，再根据后缀找到大于后缀编号的editlog文件，再加载到内存中还原对目录树的操作，就可以重建目录树了。</p>
+<h3 id="数据块管理"><a href="#数据块管理" class="headerlink" title="数据块管理"></a>数据块管理</h3><p>上传到HDFS上的数据文件，在内部都会转换为数据块（block）存放到DataNode节点。那么NameNode还需要维护一个信息，即数据文件对应有哪些数据块，这些数据块存放在哪些DataNode上。有了这些信息后，客户端才能够去对应的数据节点上获取真正的数据内容。</p>
+<p>NameNode也会在内存中维护数据块的信息，但是并不会将数据块与DataNode节点的对应关系持久化到fsimage文件中，而这些信息是由DataNode主动上报给NameNode的，NameNode收到这些上报的信息后，会在内存中构建数据块与数据节点的对应关系。</p>
+<p><img src="https://i.imgur.com/7ulGB7m.png" alt></p>
+<p>思考一下，为什么不能将这些信息也持久化到fsimage中呢？</p>
+<p>没有必要，如果持久化，还需要将数据块的变动信息（移动，增加数据块副本，删除多余的数据块等）也存储到editlog中，并且这些信息可能由于数据节点的变动造成更多的不一致。因此在NameNode启动时，直接从数据节点的汇报信息中构建就行了。</p>
+<h2 id="Secondary-NameNode"><a href="#Secondary-NameNode" class="headerlink" title="Secondary NameNode"></a>Secondary NameNode</h2><p>在上一节我们介绍了fsimage和editlog文件。考虑一个场景，假设在上一次将fsimage文件写入到了磁盘后，随后发生了大量的操作，产生了很多庞大的editlog文件，虽然这样并不会对NameNode运行造成影响，但是在NameNode重启的时候回导致需要非常长的时间进行恢复。想象看， 要将editlog中的操作再次进行回放，代价还是挺高的。</p>
+<p>一个解决方案是运行Secondary NameNode，该组件会定时将NameNode上面的fsimage和editlog文件下载到本地，然后进行合并，最后将合并后的fsimage文件再传回NameNode，以加快NameNode在启动时的速度。</p>
+<p>这里我们就不过多介绍这个组件了，因为在实际场景中，NameNode都是以HA的方式进行配置的，Seconary NameNode以及很少使用了。</p>
+<h2 id="安全模式"><a href="#安全模式" class="headerlink" title="安全模式"></a>安全模式</h2><p>安全模式是NameNode的一种状态，处于该模式下的NameNode不接受任何对文件系统目录树的修改操作。NameNode在启动时会自动进入到安全模式，等待DataNode的数据块汇报，在内存中构建数据块与数据节点的对应关系。只有当NameNode收集到的阈值比例满足最低副本系数的数据块时才可以离开安全模式。</p>
+<p>最低副本系数指的是一个数据块应该拥有的最少副本数量，默认值是1，由<code>dfs.namenode.replication.min</code>进行配置。阈值比例就是说已经收集到的满足最低副本系数的数据块数量与HDFS文件系统所有数据块数量的比例。只有当达到了99.9%时，NameNode才会退出安全模式。</p>
+<p>当然，我们也可以通过命令行操作NameNode进入或离开安全模式。</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ bin/hdfs dfsadmin -safe mode get|enter|leave</span><br></pre></td></tr></table></figure>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>NameNode最终要的两个核心功能就是维护系统文件目录树结构，以及维护数据块与数据节点之间的对应关系。对于系统目录树，NameNode以fsimage和editlog文件进行持久化，以便在重启时恢复目录树。对于数据块关系，是在NameNode启动时等待数据节点的数据块汇报动态构建的。在重启加载文件以及等待汇报时，NameNode将处于安全模式中，只有当数据块汇报达到一定阈值后，才会退出安全模式，正常提供服务。</p>
 
       
     </div>
@@ -438,8 +465,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/10/MapReduce-Customize-Writable/" rel="next" title="【Hadoop10】：MapReduce自定义Writable对象">
-                <i class="fa fa-chevron-left"></i> 【Hadoop10】：MapReduce自定义Writable对象
+              <a href="/2019/03/28/MapReduce-and-YARN-Configuration/" rel="next" title="【Hadoop22】：MapReduce与YARN常用配置">
+                <i class="fa fa-chevron-left"></i> 【Hadoop22】：MapReduce与YARN常用配置
               </a>
             
           </div>
@@ -447,10 +474,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/10/MapReduce-Combiner/" rel="prev" title="【Hadoop12】：MapReduce Combiner">
-                【Hadoop12】：MapReduce Combiner <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -605,7 +628,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Partitioner介绍"><span class="nav-number">2.</span> <span class="nav-text">Partitioner介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#案例"><span class="nav-number">3.</span> <span class="nav-text">案例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">4.</span> <span class="nav-text">小结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#NameNode核心功能"><span class="nav-number">2.</span> <span class="nav-text">NameNode核心功能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#文件系统目录树管理"><span class="nav-number">2.1.</span> <span class="nav-text">文件系统目录树管理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据块管理"><span class="nav-number">2.2.</span> <span class="nav-text">数据块管理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Secondary-NameNode"><span class="nav-number">3.</span> <span class="nav-text">Secondary NameNode</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安全模式"><span class="nav-number">4.</span> <span class="nav-text">安全模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#小结"><span class="nav-number">5.</span> <span class="nav-text">小结</span></a></li></ol></div>
             
 
           </div>

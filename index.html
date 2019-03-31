@@ -252,6 +252,173 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/31/HDFS-NameNode-Core/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="XiaoXiGua">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/girl.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="小西瓜">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/03/31/HDFS-NameNode-Core/" itemprop="url">【Hadoop23】：NameNode核心功能</a></h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-31T14:39:27+08:00">
+                2019-03-31
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/03/31/HDFS-NameNode-Core/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/31/HDFS-NameNode-Core/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/2019/03/31/HDFS-NameNode-Core/" class="leancloud_visitors" data-flag-title="【Hadoop23】：NameNode核心功能">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数&#58;</span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>到目前为止，我们已经对HDFS、MapReduce和YARN有了一定的认识，能够使用HDFS客户端与HDFS集群进行交互，例如上传、下载、追加文件，并且了解了HDFS中NameNode、DataNode的基本作用；也能够编写一些常见的MapReduce程序，提交到YARN上运行，并根据实际情况进行一些调优。可以这样说，我们已经达到了基本能够熟练使用框架的阶段了，但是这远远不够。要掌握一个框架，不仅仅是会用，还需要了解其底层的运行原理。在接下来的一些文章中，我们将会从底层对HDFS框架进行深入学习，掌握其底层运行机制，并在必要时进行源码剖析。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2019/03/31/HDFS-NameNode-Core/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/28/MapReduce-and-YARN-Configuration/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -271,7 +438,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/03/28/MapReduce-and-YARN-Configuration/" itemprop="url">【Hadoop21】：MapReduce与YARN常用配置</a></h2>
+                <a class="post-title-link" href="/2019/03/28/MapReduce-and-YARN-Configuration/" itemprop="url">【Hadoop22】：MapReduce与YARN常用配置</a></h2>
         
 
         <div class="post-meta">
@@ -333,7 +500,7 @@
 
           
           
-             <span id="/2019/03/28/MapReduce-and-YARN-Configuration/" class="leancloud_visitors" data-flag-title="【Hadoop21】：MapReduce与YARN常用配置">
+             <span id="/2019/03/28/MapReduce-and-YARN-Configuration/" class="leancloud_visitors" data-flag-title="【Hadoop22】：MapReduce与YARN常用配置">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -438,7 +605,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/03/26/MapReduce-Submit-Job-to-YARN/" itemprop="url">【Hadoop20】：MapReduce任务提交到YARN</a></h2>
+                <a class="post-title-link" href="/2019/03/26/MapReduce-Submit-Job-to-YARN/" itemprop="url">【Hadoop21】：MapReduce任务提交到YARN</a></h2>
         
 
         <div class="post-meta">
@@ -500,7 +667,7 @@
 
           
           
-             <span id="/2019/03/26/MapReduce-Submit-Job-to-YARN/" class="leancloud_visitors" data-flag-title="【Hadoop20】：MapReduce任务提交到YARN">
+             <span id="/2019/03/26/MapReduce-Submit-Job-to-YARN/" class="leancloud_visitors" data-flag-title="【Hadoop21】：MapReduce任务提交到YARN">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -605,7 +772,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/03/24/YARN-Scheduler/" itemprop="url">【Hadoop19】：YARN调度器</a></h2>
+                <a class="post-title-link" href="/2019/03/24/YARN-Scheduler/" itemprop="url">【Hadoop20】：YARN调度器</a></h2>
         
 
         <div class="post-meta">
@@ -667,7 +834,7 @@
 
           
           
-             <span id="/2019/03/24/YARN-Scheduler/" class="leancloud_visitors" data-flag-title="【Hadoop19】：YARN调度器">
+             <span id="/2019/03/24/YARN-Scheduler/" class="leancloud_visitors" data-flag-title="【Hadoop20】：YARN调度器">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -772,7 +939,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/03/24/YARN-Introduction/" itemprop="url">【Hadoop18】YARN介绍</a></h2>
+                <a class="post-title-link" href="/2019/03/24/YARN-Introduction/" itemprop="url">【Hadoop19】YARN介绍</a></h2>
         
 
         <div class="post-meta">
@@ -834,7 +1001,7 @@
 
           
           
-             <span id="/2019/03/24/YARN-Introduction/" class="leancloud_visitors" data-flag-title="【Hadoop18】YARN介绍">
+             <span id="/2019/03/24/YARN-Introduction/" class="leancloud_visitors" data-flag-title="【Hadoop19】YARN介绍">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -939,7 +1106,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/03/24/MapReduce-TopN/" itemprop="url">【Hadoop17】：MapReduce案例-TopN</a></h2>
+                <a class="post-title-link" href="/2019/03/24/MapReduce-TopN/" itemprop="url">【Hadoop18】：MapReduce案例-TopN</a></h2>
         
 
         <div class="post-meta">
@@ -1001,7 +1168,7 @@
 
           
           
-             <span id="/2019/03/24/MapReduce-TopN/" class="leancloud_visitors" data-flag-title="【Hadoop17】：MapReduce案例-TopN">
+             <span id="/2019/03/24/MapReduce-TopN/" class="leancloud_visitors" data-flag-title="【Hadoop18】：MapReduce案例-TopN">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -1106,7 +1273,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/03/24/MapReduce-Friends-Together/" itemprop="url">【Hadoop16】：MapReduce案例-共同好友</a></h2>
+                <a class="post-title-link" href="/2019/03/24/MapReduce-Friends-Together/" itemprop="url">【Hadoop17】：MapReduce案例-共同好友</a></h2>
         
 
         <div class="post-meta">
@@ -1168,7 +1335,7 @@
 
           
           
-             <span id="/2019/03/24/MapReduce-Friends-Together/" class="leancloud_visitors" data-flag-title="【Hadoop16】：MapReduce案例-共同好友">
+             <span id="/2019/03/24/MapReduce-Friends-Together/" class="leancloud_visitors" data-flag-title="【Hadoop17】：MapReduce案例-共同好友">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -1440,7 +1607,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/03/17/MapReduce-Flow-Statistics/" itemprop="url">【Hadoop14】：MapReduce案例-流量统计</a></h2>
+                <a class="post-title-link" href="/2019/03/17/MapReduce-Flow-Statistics/" itemprop="url">【Hadoop15】：MapReduce案例-流量统计</a></h2>
         
 
         <div class="post-meta">
@@ -1502,7 +1669,7 @@
 
           
           
-             <span id="/2019/03/17/MapReduce-Flow-Statistics/" class="leancloud_visitors" data-flag-title="【Hadoop14】：MapReduce案例-流量统计">
+             <span id="/2019/03/17/MapReduce-Flow-Statistics/" class="leancloud_visitors" data-flag-title="【Hadoop15】：MapReduce案例-流量统计">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -1607,7 +1774,7 @@
         
           <h2 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2019/03/17/MapReduce-Counter/" itemprop="url">【Hadoop13】：MapReduce计数器</a></h2>
+                <a class="post-title-link" href="/2019/03/17/MapReduce-Counter/" itemprop="url">【Hadoop14】：MapReduce计数器</a></h2>
         
 
         <div class="post-meta">
@@ -1669,7 +1836,7 @@
 
           
           
-             <span id="/2019/03/17/MapReduce-Counter/" class="leancloud_visitors" data-flag-title="【Hadoop13】：MapReduce计数器">
+             <span id="/2019/03/17/MapReduce-Counter/" class="leancloud_visitors" data-flag-title="【Hadoop14】：MapReduce计数器">
                <span class="post-meta-divider">|</span>
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -1705,174 +1872,6 @@
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/2019/03/17/MapReduce-Counter/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/17/MapReduce-User-Logs/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="XiaoXiGua">
-      <meta itemprop="description" content>
-      <meta itemprop="image" content="/images/girl.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="小西瓜">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h2 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2019/03/17/MapReduce-User-Logs/" itemprop="url">【Hadoop12】：MapReduce用户日志</a></h2>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-03-17T14:18:00+08:00">
-                2019-03-17
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
-                    <span itemprop="name">Hadoop</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2019/03/17/MapReduce-User-Logs/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count valine-comment-count" data-xid="/2019/03/17/MapReduce-User-Logs/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-             <span id="/2019/03/17/MapReduce-User-Logs/" class="leancloud_visitors" data-flag-title="【Hadoop12】：MapReduce用户日志">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数&#58;</span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我们在编写MapReduce时，有时候需要打印一些日志信息，方便排查错误。例如，在Map任务中，发现某些数据格式错误，不仅仅是跳过这些错误的数据，还需要将错误数据打印到日志中。</p>
-<p>YARN有一个日志聚合服务，可以去取到已完成的应用的任务日志，并且将其搬移到HDFS中，在那里任务日志被存储在一个容器文件中用于存档。我们在环境搭建的章节，已经开启了日志聚合服务。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2019/03/17/MapReduce-User-Logs/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
@@ -1962,7 +1961,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">23</span>
+                  <span class="site-state-item-count">25</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
